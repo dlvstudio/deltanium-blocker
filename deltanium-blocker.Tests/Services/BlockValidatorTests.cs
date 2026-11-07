@@ -14,7 +14,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var tx = TestDataBuilder.CreateTransaction();
@@ -38,7 +38,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var block = TestDataBuilder.CreateBlock(
@@ -61,7 +61,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var block = TestDataBuilder.CreateBlock(
@@ -83,7 +83,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var tx = TestDataBuilder.CreateTransaction();
@@ -108,7 +108,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var tx = TestDataBuilder.CreateTransaction(timestamp: 0); // Invalid timestamp
@@ -132,7 +132,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
 
         var genesisBlock = TestDataBuilder.CreateGenesisBlock();
 
@@ -150,7 +150,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var block = TestDataBuilder.CreateBlock(
@@ -173,7 +173,7 @@ public class BlockValidatorTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
 
         var tx1 = TestDataBuilder.CreateTransaction();

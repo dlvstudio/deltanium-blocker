@@ -16,25 +16,35 @@ Block Creator nodes must register with the Central API before they can participa
 
 The node will automatically register on first startup if `node_info.json` doesn't exist.
 
-### Environment Variables
+### Environment Variables / secrets
 
-Set the following environment variables before running the node:
+Do **not** commit real vouchers into `appsettings.json`. Prefer env or user-secrets:
 
 ```bash
 export CENTRAL_API_URL="http://localhost:5002"
-export NODE_ENDPOINT="http://localhost:5001"
-export VOUCHER="YOUR_VOUCHER_CODE_HERE"
+export NODE_ENDPOINT="http://localhost:5003"
+export VOUCHER="YOUR_ONE_TIME_VOUCHER"
+export INTERNAL_API_TOKEN="shared-with-central-api"   # for GET /api/tx/pull
 ```
+
+Or:
+
+```bash
+dotnet user-secrets set "NodeRegistration:Voucher" "YOUR_ONE_TIME_VOUCHER"
+dotnet user-secrets set "InternalApi:Token" "shared-with-central-api"
+dotnet user-secrets set "ConnectionStrings:Default" "Server=...;Database=deltanium_blocker;..."
+```
+
+Central API consumes vouchers **atomically** (second use fails).
 
 ### Running with Registration
 
 ```bash
-# Set environment variables
-export VOUCHER="YOUR_VOUCHER_CODE_HERE"
+export VOUCHER="YOUR_ONE_TIME_VOUCHER"
 export CENTRAL_API_URL="http://localhost:5002"
-export NODE_ENDPOINT="http://localhost:5001"
+export NODE_ENDPOINT="http://localhost:5003"
+export INTERNAL_API_TOKEN="shared-with-central-api"
 
-# Run the node
 dotnet run
 ```
 
@@ -50,12 +60,12 @@ dotnet run
    - Request includes: `endpoint`, `voucher`, `publicKey`
 
 3. **Voucher Validation**:
-   - Central API validates the voucher
-   - Voucher must be unused and valid
+   - Central API validates the voucher with an **atomic** mark-used (`Used` flips false→true in one statement)
+   - Concurrent double-registration with the same voucher: only one succeeds
 
 4. **Node Storage**:
    - Central API stores the node information
-   - Voucher is marked as used
+   - Voucher cannot be reused
 
 5. **Local Storage**:
    - Node saves credentials to `node_info.json`:

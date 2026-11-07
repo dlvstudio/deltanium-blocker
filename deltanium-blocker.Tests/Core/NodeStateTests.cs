@@ -11,7 +11,7 @@ public class NodeStateTests
     public void AddBlock_FirstBlock_ShouldSetHeightToZero()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var block = TestDataBuilder.CreateBlock(height: 0);
 
         // Act
@@ -26,7 +26,7 @@ public class NodeStateTests
     public void AddBlock_MultipleBlocks_ShouldIncrementHeight()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var block1 = TestDataBuilder.CreateBlock(height: 0);
         var block2 = TestDataBuilder.CreateBlock(height: 1, previousId: block1.Id);
         var block3 = TestDataBuilder.CreateBlock(height: 2, previousId: block2.Id);
@@ -45,7 +45,7 @@ public class NodeStateTests
     public void LatestBlockId_EmptyChain_ShouldReturnEmptyString()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
 
         // Act & Assert
         state.LatestBlockId.Should().BeEmpty();
@@ -55,7 +55,7 @@ public class NodeStateTests
     public void LatestBlockId_WithBlocks_ShouldReturnLastBlockId()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var block1 = TestDataBuilder.CreateBlock(height: 0);
         var block2 = TestDataBuilder.CreateBlock(height: 1, previousId: block1.Id);
 
@@ -71,7 +71,7 @@ public class NodeStateTests
     public void Height_EmptyChain_ShouldReturnMinusOne()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
 
         // Act & Assert
         state.Height.Should().Be(-1);
@@ -81,7 +81,7 @@ public class NodeStateTests
     public void Height_WithBlocks_ShouldReturnLastHeight()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var block1 = TestDataBuilder.CreateBlock(height: 0);
         var block2 = TestDataBuilder.CreateBlock(height: 1, previousId: block1.Id);
 
@@ -97,7 +97,7 @@ public class NodeStateTests
     public void Chain_ShouldReturnReadOnlyList()
     {
         // Arrange
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var block1 = TestDataBuilder.CreateBlock(height: 0);
         var block2 = TestDataBuilder.CreateBlock(height: 1, previousId: block1.Id);
 

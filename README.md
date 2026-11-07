@@ -44,7 +44,8 @@ The Deltanium Block Creator node is a critical component of the Deltanium blockc
 - [ ] P2P network communication
 - [ ] Block broadcasting to network
 - [ ] Fork detection and resolution
-- [ ] State persistence (database)
+- [x] State persistence (MySQL preferred; JSON fallback for mempool/blocks)
+- [x] Tx pull from Central API protected by `X-Internal-Token` (`INTERNAL_API_TOKEN`)
 - [ ] Metrics and monitoring
 - [ ] Health reporting to Central Node
 - [ ] Penalty handling for missed blocks
@@ -100,7 +101,7 @@ deltanium-blocker/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_ORG/deltanium.git
+git clone https://dlvstudio.visualstudio.com/Deltanium/_git/Deltanium%20Blocker
 cd deltanium-blocker
 ```
 
@@ -292,7 +293,8 @@ Contributions are welcome! Please follow these guidelines:
 ## Support
 
 For issues and questions:
-- Open an issue on GitHub
+- Create an issue in Azure DevOps
+- Contact the development team
 - Check the main Deltanium documentation
 
 ## References

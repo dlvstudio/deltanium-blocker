@@ -19,7 +19,7 @@ public class TransactionValidationServiceTests
             Id: "tx-test-1",
             Type: "StorageOperation",
             From: "024aa6c7f0bdd2fc4a9ccc4ce71b79e834457adae7ccc4b1fd61c9022c2a9da2d0",
-            To: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            To: "03699b56070f41068ca1166169547a4bd05022c41e184069352163dfe21553a14c",
             Data: dataElement,
             Timestamp: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Fee: "0.0000001000",
@@ -53,7 +53,7 @@ public class TransactionValidationServiceTests
             "storageNodeSignature": "s2",
             "content": {
               "appPublicKey": "024aa6c7f0bdd2fc4a9ccc4ce71b79e834457adae7ccc4b1fd61c9022c2a9da2d0",
-              "storageNodePublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+              "storageNodePublicKey": "03699b56070f41068ca1166169547a4bd05022c41e184069352163dfe21553a14c"
             }
           }
         }
@@ -78,7 +78,7 @@ public class TransactionValidationServiceTests
             "appSignature": "s1",
             "storageNodeSignature": "s2",
             "content": {
-              "storageNodePublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+              "storageNodePublicKey": "03699b56070f41068ca1166169547a4bd05022c41e184069352163dfe21553a14c"
             }
           }
         }
@@ -129,7 +129,7 @@ public class TransactionValidationServiceTests
             "storageNodeSignature": "invalid-sig",
             "content": {
               "appPublicKey": "024aa6c7f0bdd2fc4a9ccc4ce71b79e834457adae7ccc4b1fd61c9022c2a9da2d0",
-              "storageNodePublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+              "storageNodePublicKey": "03699b56070f41068ca1166169547a4bd05022c41e184069352163dfe21553a14c"
             }
           }
         }
@@ -155,7 +155,7 @@ public class TransactionValidationServiceTests
             "storageNodeSignature": "s2",
             "content": {
               "appPublicKey": "024aa6c7f0bdd2fc4a9ccc4ce71b79e834457adae7ccc4b1fd61c9022c2a9da2d0",
-              "storageNodePublicKey": "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+              "storageNodePublicKey": "03699b56070f41068ca1166169547a4bd05022c41e184069352163dfe21553a14c",
               "customField": "any",
               "anotherDynamic": 42
             }

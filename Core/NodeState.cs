@@ -1,14 +1,12 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json;
+using Deltanium.Blocker.Data;
 
 namespace Deltanium.Blocker.Core
 {
     public class NodeState
     {
         private readonly List<Block> _chain = new();
-        private readonly string _blocksFilePath;
+        private readonly IBlockStore _store;
         private readonly object _lock = new();
 
         public string LatestBlockId => _chain.Count == 0 ? string.Empty : _chain[^1].Id;
@@ -16,9 +14,9 @@ namespace Deltanium.Blocker.Core
 
         public IReadOnlyList<Block> Chain => _chain.AsReadOnly();
 
-        public NodeState(string? blocksFilePath = null)
+        public NodeState(IBlockStore? store = null)
         {
-            _blocksFilePath = blocksFilePath ?? "blocks.json";
+            _store = store ?? new JsonBlockStore();
             LoadBlocks();
         }
 
@@ -27,60 +25,16 @@ namespace Deltanium.Blocker.Core
             lock (_lock)
             {
                 _chain.Add(block);
-                SaveBlocks();
+                _store.SaveAll(_chain);
             }
         }
 
         private void LoadBlocks()
         {
-            try
-            {
-                if (!File.Exists(_blocksFilePath))
-                {
-                    File.WriteAllText(_blocksFilePath, "[]");
-                    return;
-                }
-
-                var json = File.ReadAllText(_blocksFilePath);
-                var blocks = JsonSerializer.Deserialize<List<Block>>(json);
-                if (blocks != null && blocks.Count > 0)
-                {
-                    _chain.Clear();
-                    _chain.AddRange(blocks);
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[STATE] Error loading blocks.json: {ex.Message}");
-            }
-        }
-
-        private void SaveBlocks()
-        {
-            try
-            {
-                var json = JsonSerializer.Serialize(_chain, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-                File.WriteAllText(_blocksFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[STATE] Error saving blocks.json: {ex.Message}");
-            }
+            var blocks = _store.LoadAll();
+            if (blocks.Count == 0) return;
+            _chain.Clear();
+            _chain.AddRange(blocks);
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

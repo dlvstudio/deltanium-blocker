@@ -2,27 +2,32 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using Deltanium.Blocker.Core;
+using Deltanium.Blocker.Data;
 
 namespace Deltanium.Blocker.Services
 {
     public class TransactionPool
     {
         private readonly ConcurrentDictionary<string, Transaction> _pool = new();
-        private readonly string _mempoolFilePath;
+        private readonly IMempoolStore _store;
         private readonly object _lock = new();
         private readonly ILogger<TransactionPool> _logger;
 
         public int Count => _pool.Count;
 
-        public TransactionPool(string? mempoolFilePath = null, ILogger<TransactionPool>? logger = null)
+        public TransactionPool(IMempoolStore? store = null, ILogger<TransactionPool>? logger = null, string? mempoolFilePath = null)
         {
-            _mempoolFilePath = mempoolFilePath ?? "mempool.json";
+            _store = store ?? new JsonMempoolStore(mempoolFilePath);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             LoadMempool();
+        }
+
+        // Backward-compatible ctor used by older call sites / tests
+        public TransactionPool(string? mempoolFilePath, ILogger<TransactionPool>? logger)
+            : this(new JsonMempoolStore(mempoolFilePath), logger)
+        {
         }
 
         public bool TryAdd(Transaction tx)
@@ -61,23 +66,12 @@ namespace Deltanium.Blocker.Services
         {
             try
             {
-                if (!File.Exists(_mempoolFilePath))
-                {
-                    File.WriteAllText(_mempoolFilePath, "[]");
-                    return;
-                }
-
-                var json = File.ReadAllText(_mempoolFilePath);
-                var txs = JsonSerializer.Deserialize<List<Transaction>>(json);
-                if (txs == null) return;
-                foreach (var tx in txs)
-                {
+                foreach (var tx in _store.LoadAll())
                     _pool.TryAdd(tx.Id, tx);
-                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[MEMPOOL] Error loading mempool.json: {ErrorMessage}", ex.Message);
+                _logger.LogError(ex, "[MEMPOOL] Error loading mempool: {ErrorMessage}", ex.Message);
             }
         }
 
@@ -87,29 +81,13 @@ namespace Deltanium.Blocker.Services
             {
                 try
                 {
-                    var json = JsonSerializer.Serialize(_pool.Values.ToList(), new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    });
-                    File.WriteAllText(_mempoolFilePath, json);
+                    _store.SaveAll(_pool.Values.ToList());
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "[MEMPOOL] Error saving mempool.json: {ErrorMessage}", ex.Message);
+                    _logger.LogError(ex, "[MEMPOOL] Error saving mempool: {ErrorMessage}", ex.Message);
                 }
             }
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

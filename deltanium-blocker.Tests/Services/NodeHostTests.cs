@@ -14,7 +14,7 @@ public class NodeHostTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var coordinator = new CentralCoordinatorClient(config, TestDataBuilder.CreateLogger<CentralCoordinatorClient>());
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
@@ -32,7 +32,7 @@ public class NodeHostTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var coordinator = new CentralCoordinatorClient(config, TestDataBuilder.CreateLogger<CentralCoordinatorClient>());
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
@@ -77,7 +77,7 @@ public class NodeHostTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var coordinator = new CentralCoordinatorClient(config, TestDataBuilder.CreateLogger<CentralCoordinatorClient>());
         var validator = new BlockValidator(config, TestDataBuilder.CreateLogger<BlockValidator>());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());

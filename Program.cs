@@ -2,8 +2,10 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using Deltanium.Blocker;
 using Deltanium.Blocker.Core;
+using Deltanium.Blocker.Data;
 using Deltanium.Blocker.Services;
 using Deltanium.Blocker.Services.Utils;
 using Deltanium.Blocker.Middleware;
@@ -110,7 +112,12 @@ try
     builder.WebHost.UseUrls(nodeEndpoint); // Configure listening URL
     builder.Host.UseSerilog();
 
-    var voucher = builder.Configuration["NodeRegistration:Voucher"] ?? builder.Configuration["VOUCHER"] ?? throw new InvalidOperationException("VOUCHER environment variable is required");
+    var voucher = Environment.GetEnvironmentVariable("VOUCHER")
+        ?? builder.Configuration["NodeRegistration:Voucher"]
+        ?? builder.Configuration["VOUCHER"];
+    if (string.IsNullOrWhiteSpace(voucher))
+        throw new InvalidOperationException(
+            "Node registration voucher required. Set VOUCHER or NodeRegistration:Voucher (user-secrets).");
 
     // Register ILogger
     builder.Services.AddSingleton(Log.Logger);
@@ -163,12 +170,39 @@ try
     if (useLocalDecision)
         Log.Information("USE_LOCAL_DECISION=true: accepting transactions without Central Decision API.");
 
+    var storageProvider = builder.Configuration["Storage:Provider"] ?? "Json";
+    var connectionString = builder.Configuration.GetConnectionString("Default");
+
+    if (string.Equals(storageProvider, "MySql", StringComparison.OrdinalIgnoreCase))
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException(
+                "MySQL enabled but ConnectionStrings:Default is empty. " +
+                "Set via User Secrets (id: deltanium-blocker-local-secrets).");
+        }
+
+        var serverVersion = new MySqlServerVersion(new Version(8, 4, 0));
+        builder.Services.AddDbContextFactory<BlockerDbContext>(options =>
+            options.UseMySql(connectionString, serverVersion));
+        builder.Services.AddSingleton<IBlockStore, MySqlBlockStore>();
+        builder.Services.AddSingleton<IMempoolStore, MySqlMempoolStore>();
+        Log.Information("Blocker Storage:Provider=MySql");
+    }
+    else
+    {
+        builder.Services.AddSingleton<IBlockStore>(_ => new JsonBlockStore("blocks.json"));
+        builder.Services.AddSingleton<IMempoolStore>(_ => new JsonMempoolStore("mempool.json"));
+        Log.Information("Blocker Storage:Provider=Json");
+    }
+
     // Register other services
     builder.Services.AddSingleton<TransactionPool>(provider =>
-        new TransactionPool("mempool.json", provider.GetRequiredService<ILogger<TransactionPool>>()));
+        new TransactionPool(provider.GetRequiredService<IMempoolStore>(), provider.GetRequiredService<ILogger<TransactionPool>>()));
     builder.Services.AddSingleton<DecisionClient>(provider =>
         new DecisionClient(apiUrl, provider.GetRequiredService<ILogger<DecisionClient>>()));
-    builder.Services.AddSingleton<NodeState>();
+    builder.Services.AddSingleton<NodeState>(provider =>
+        new NodeState(provider.GetRequiredService<IBlockStore>()));
     builder.Services.AddSingleton<CentralCoordinatorClient>(provider =>
         new CentralCoordinatorClient(config, provider.GetRequiredService<ILogger<CentralCoordinatorClient>>()));
     builder.Services.AddSingleton<BlockValidator>(provider =>
@@ -187,6 +221,14 @@ try
     builder.Services.AddEndpointsApiExplorer();
 
     var app = builder.Build();
+
+    if (string.Equals(storageProvider, "MySql", StringComparison.OrdinalIgnoreCase))
+    {
+        using var scope = app.Services.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<BlockerDbContext>>();
+        using var db = factory.CreateDbContext();
+        db.Database.EnsureCreated();
+    }
 
     // Configure the HTTP request pipeline.
     // if (app.Environment.IsDevelopment())

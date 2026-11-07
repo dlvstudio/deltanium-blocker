@@ -1,4 +1,5 @@
 using Deltanium.Blocker.Core;
+using Deltanium.Blocker.Data;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NBitcoin;
@@ -17,6 +18,9 @@ public static class TestDataBuilder
 
     /// <summary>Unique temp path for blocks so tests don't share state (NodeState loads from file).</summary>
     public static string CreateTempBlocksPath() => Path.Combine(Path.GetTempPath(), "test_blocks_" + Guid.NewGuid().ToString("N") + ".json");
+
+    /// <summary>Isolated JSON block store for NodeState tests after MySQL refactor.</summary>
+    public static IBlockStore CreateTempBlockStore() => new JsonBlockStore(CreateTempBlocksPath());
 
     public static Transaction CreateTransaction(
         TransactionType type = TransactionType.UserRegistration,

@@ -50,10 +50,8 @@ logs/
 appsettings.Development.json
 appsettings.Local.json
 
-# Generated at first registration — contains mnemonic + private key
+# Node credentials (never commit)
 node_info.json
-
-# Local chain state
 blocks.json
 mempool.json
 

@@ -14,9 +14,9 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -35,10 +35,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -54,10 +54,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         var tx1 = TestDataBuilder.CreateTransaction();
         var tx2 = TestDataBuilder.CreateTransaction();
@@ -79,11 +79,11 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var genesisBlock = TestDataBuilder.CreateGenesisBlock();
         state.AddBlock(genesisBlock);
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -98,11 +98,11 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         var genesisBlock = TestDataBuilder.CreateGenesisBlock();
         state.AddBlock(genesisBlock);
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -117,10 +117,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         var tx1 = TestDataBuilder.CreateTransaction();
         var tx2 = TestDataBuilder.CreateTransaction();
@@ -141,10 +141,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -159,10 +159,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -177,10 +177,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -196,10 +196,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Act
         var block = builder.BuildBlock(auth);
@@ -215,10 +215,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         var tx1 = TestDataBuilder.CreateTransaction(fee: 10);
         var tx2 = TestDataBuilder.CreateTransaction(fee: 100);
@@ -243,10 +243,10 @@ public class BlockBuilderTests
         // Arrange
         var config = TestDataBuilder.CreateNodeConfig();
         var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
-        var state = new NodeState(TestDataBuilder.CreateTempBlocksPath());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
         state.AddBlock(TestDataBuilder.CreateGenesisBlock());
         var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
-        var auth = new CentralAuthorization("test-auth-signature", "TEST_CENTRAL_PUBKEY_PLACEHOLDER");
+        var auth = new CentralAuthorization("test-auth-signature", "02c6195a8521bd4336468b7b948e75b35aff50298753b3c2a33507af28e9e8fba6");
 
         // Add 150 transactions
         for (int i = 0; i < 150; i++)
