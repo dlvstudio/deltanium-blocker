@@ -9,10 +9,14 @@ using Deltanium.Blocker.Data;
 using Deltanium.Blocker.Services;
 using Deltanium.Blocker.Services.Utils;
 using Deltanium.Blocker.Middleware;
+using Deltanium.Blocker.Security;
 using Serilog;
 using Serilog.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
+// Decrypt dpapi:* Machine/AppPool env vars before host/config bind (IIS production).
+DpapiEnvironment.ExpandProcessEnvironment();
 
 // --- Serilog Configuration (START) ---
 Log.Logger = new LoggerConfiguration()
@@ -34,6 +38,7 @@ try
     var config = NodeConfig.LoadDefaults();
 
     var builder = WebApplication.CreateBuilder(args);
+    builder.Configuration.AddDpapiDecryptedOverrides();
     var centralApiUrl = builder.Configuration["CentralApiUrl"] ?? Environment.GetEnvironmentVariable("CENTRAL_API_URL");
     if (!string.IsNullOrWhiteSpace(centralApiUrl))
     {
