@@ -123,5 +123,36 @@ public class NodeConfigTests
             Directory.SetCurrentDirectory(originalDir);
         }
     }
+
+    [Fact]
+    public void LoadDefaults_WithNodeInfoAndNodeEndpointEnv_ShouldKeepKeysAndOverlayEndpoint()
+    {
+        using var helper = new TestFileHelper();
+        var originalDir = Directory.GetCurrentDirectory();
+        var prev = Environment.GetEnvironmentVariable("NODE_ENDPOINT");
+        try
+        {
+            Directory.SetCurrentDirectory(helper.TempDirectory);
+            File.WriteAllText("node_info.json", JsonSerializer.Serialize(new NodeInfo
+            {
+                PublicKey = "pk-from-file",
+                PrivateKey = "sk-from-file",
+                Endpoint = "http://from-file:5001",
+                ApiResponse = JsonSerializer.Deserialize<JsonElement>("{}")
+            }));
+            Environment.SetEnvironmentVariable("NODE_ENDPOINT", "https://blocker-1.deltanium.com");
+
+            var config = NodeConfig.LoadDefaults();
+
+            config.NodePublicKey.Should().Be("pk-from-file");
+            config.NodePrivateKey.Should().Be("sk-from-file");
+            config.NodeEndpoint.Should().Be("https://blocker-1.deltanium.com");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("NODE_ENDPOINT", prev);
+            Directory.SetCurrentDirectory(originalDir);
+        }
+    }
 }
 

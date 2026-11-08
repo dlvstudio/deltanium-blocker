@@ -20,42 +20,47 @@ namespace Deltanium.Blocker.Core
 
         public static NodeConfig LoadDefaults()
         {
-            NodeConfig config;
+            // Always try node_info.json for keys first. NODE_ENDPOINT / CENTRAL_* only overlay.
+            // (Previously NODE_ENDPOINT short-circuited and left PLACEHOLDER keys — IIS prod crash.)
+            NodeConfig config = new NodeConfig();
+            var nodeInfoPath = "node_info.json";
+            if (File.Exists(nodeInfoPath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(nodeInfoPath);
+                    var nodeInfo = JsonSerializer.Deserialize<Services.NodeInfo>(json);
+                    if (nodeInfo != null && !string.IsNullOrEmpty(nodeInfo.PublicKey))
+                    {
+                        config = new NodeConfig
+                        {
+                            NodePublicKey = nodeInfo.PublicKey,
+                            NodePrivateKey = nodeInfo.PrivateKey,
+                            CentralApiPublicKey = nodeInfo.CentralApiPublicKey ?? string.Empty,
+                            NodeEndpoint = nodeInfo.Endpoint ?? "http://localhost:5003"
+                        };
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[CONFIG] Error loading node_info.json: {ex.Message}");
+                }
+            }
+
             var envEndpoint = Environment.GetEnvironmentVariable("NODE_ENDPOINT");
             if (!string.IsNullOrWhiteSpace(envEndpoint))
             {
-                config = new NodeConfig { NodeEndpoint = envEndpoint };
-            }
-            else
-            {
-                var nodeInfoPath = "node_info.json";
-                if (File.Exists(nodeInfoPath))
+                config = new NodeConfig
                 {
-                    try
-                    {
-                        var json = File.ReadAllText(nodeInfoPath);
-                        var nodeInfo = JsonSerializer.Deserialize<Services.NodeInfo>(json);
-                        if (nodeInfo != null && !string.IsNullOrEmpty(nodeInfo.PublicKey))
-                        {
-                            config = new NodeConfig
-                            {
-                                NodePublicKey = nodeInfo.PublicKey,
-                                NodePrivateKey = nodeInfo.PrivateKey,
-                                CentralApiPublicKey = nodeInfo.CentralApiPublicKey ?? string.Empty,
-                                NodeEndpoint = nodeInfo.Endpoint ?? "http://localhost:5003"
-                            };
-                        }
-                        else
-                            config = new NodeConfig();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[CONFIG] Error loading node_info.json: {ex.Message}");
-                        config = new NodeConfig();
-                    }
-                }
-                else
-                    config = new NodeConfig();
+                    NodePublicKey = config.NodePublicKey,
+                    NodePrivateKey = config.NodePrivateKey,
+                    CentralEndpoint = config.CentralEndpoint,
+                    CentralApiPublicKey = config.CentralApiPublicKey,
+                    NodeEndpoint = envEndpoint.Trim(),
+                    BlockCreationInterval = config.BlockCreationInterval,
+                    ValidationPollInterval = config.ValidationPollInterval,
+                    BlockVersion = config.BlockVersion
+                };
             }
 
             var centralPubKey = Environment.GetEnvironmentVariable("CENTRAL_API_PUBLIC_KEY");

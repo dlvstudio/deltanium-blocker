@@ -144,8 +144,6 @@ try
     builder.Services.AddSingleton(Log.Logger);
     builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddSerilog(dispose: true));
 
-    builder.Services.AddSingleton(config);
-
     // Register NodeRegistrationService and perform initial registration
     builder.Services.AddSingleton<NodeRegistrationService>(provider =>
     {
@@ -173,11 +171,29 @@ try
         }
     }
 
-    if (!registrationResult.AlreadyRegistered)
+    // Prefer keys from registration result, then reload node_info (NODE_ENDPOINT must not drop keys).
+    if (registrationResult.Success
+        && !string.IsNullOrWhiteSpace(registrationResult.PublicKey)
+        && !string.IsNullOrWhiteSpace(registrationResult.PrivateKey))
+    {
+        config = new NodeConfig
+        {
+            NodePublicKey = registrationResult.PublicKey,
+            NodePrivateKey = registrationResult.PrivateKey,
+            CentralEndpoint = config.CentralEndpoint,
+            CentralApiPublicKey = config.CentralApiPublicKey,
+            NodeEndpoint = nodeEndpoint,
+            BlockCreationInterval = config.BlockCreationInterval,
+            ValidationPollInterval = config.ValidationPollInterval,
+            BlockVersion = config.BlockVersion
+        };
+    }
+    else
     {
         config = NodeConfig.LoadDefaults();
-        builder.Services.AddSingleton(config);
     }
+
+    builder.Services.AddSingleton(config);
 
     if (config.NodePublicKey == "NODE_PUBKEY_PLACEHOLDER" || config.NodePrivateKey == "NODE_PRIVKEY_PLACEHOLDER")
     {
