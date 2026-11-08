@@ -107,9 +107,25 @@ try
         }
     }
 
-    // Register node with Central API if needed
+    // Public URL registered with Central (may be https://blocker-1.deltanium.com).
+    // Behind IIS/ANCM do not bind Kestrel to that public URL — ANCM owns the listen socket.
     var nodeEndpoint = Environment.GetEnvironmentVariable("NODE_ENDPOINT") ?? config.NodeEndpoint;
-    builder.WebHost.UseUrls(nodeEndpoint); // Configure listening URL
+    var hostedInIis =
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_IIS_HTTP_PORT")) ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_IIS_HTTPAUTH"));
+    if (!hostedInIis)
+    {
+        var listenUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS")
+            ?? Environment.GetEnvironmentVariable("LISTEN_URLS");
+        if (string.IsNullOrWhiteSpace(listenUrls))
+        {
+            // If NODE_ENDPOINT is https (public hostname), fall back to local HTTP listen.
+            listenUrls = nodeEndpoint.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                ? "http://127.0.0.1:5003"
+                : nodeEndpoint;
+        }
+        builder.WebHost.UseUrls(listenUrls);
+    }
     builder.Host.UseSerilog();
 
     var voucher = Environment.GetEnvironmentVariable("VOUCHER")
