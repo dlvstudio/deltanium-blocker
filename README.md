@@ -2,9 +2,19 @@
 
 A .NET implementation of the Block Creator node for the Deltanium blockchain network. This node is responsible for processing transactions, creating blocks, and validating blocks created by other nodes in the network.
 
+## Production
+
+| | URL |
+|--|-----|
+| **Block creator 1** | [https://blocker-1.deltanium.com](https://blocker-1.deltanium.com) |
+| Central API | [https://api.deltanium.com](https://api.deltanium.com) |
+| App | [https://app.deltanium.com](https://app.deltanium.com) |
+
+Local default: `http://127.0.0.1:5003`.
+
 ## Overview
 
-The Deltanium Block Creator node is a critical component of the Deltanium blockchain infrastructure. It works in coordination with the Central Coordination Node (deltanium.com) to maintain the blockchain by:
+The Deltanium Block Creator node is a critical component of the Deltanium blockchain infrastructure. It works in coordination with the Central Coordination Node ([api.deltanium.com](https://api.deltanium.com)) to maintain the blockchain by:
 
 - Receiving and validating transactions from the network
 - Creating new blocks when authorized by the Central Node
@@ -124,7 +134,7 @@ public class NodeConfig
 {
     public string NodePublicKey { get; init; } = "NODE_PUBKEY_PLACEHOLDER";
     public string NodePrivateKey { get; init; } = "NODE_PRIVKEY_PLACEHOLDER";
-    public Uri CentralEndpoint { get; init; } = new Uri("https://deltanium.com");
+    public Uri CentralEndpoint { get; init; } = new Uri("https://api.deltanium.com");
     public TimeSpan BlockCreationInterval { get; init; } = TimeSpan.FromSeconds(10);
     public TimeSpan ValidationPollInterval { get; init; } = TimeSpan.FromSeconds(5);
 }
