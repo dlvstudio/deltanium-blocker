@@ -291,7 +291,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License
 
-[Add license information here]
+MIT — see [LICENSE](LICENSE).
 
 ## Related Projects
 
