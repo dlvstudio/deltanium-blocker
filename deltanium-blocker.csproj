@@ -29,6 +29,9 @@
 
   <ItemGroup>
     <Compile Remove="deltanium-blocker.Tests/**" />
+    <Content Remove="deltanium-blocker.Tests/**" />
+    <EmbeddedResource Remove="deltanium-blocker.Tests/**" />
+    <None Remove="deltanium-blocker.Tests/**" />
   </ItemGroup>
 
 </Project>
