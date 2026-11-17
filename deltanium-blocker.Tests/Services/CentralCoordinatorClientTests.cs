@@ -21,7 +21,9 @@ public class CentralCoordinatorClientTests
         // Assert
         // Since it's random, we just verify it returns something (either null or authorization)
         // We can't assert a specific value, but we can verify the method doesn't throw
-        auth.Should().BeAssignableTo<CentralAuthorization?>();
+        // (null is a valid outcome: FluentAssertions' BeAssignableTo fails on null, so check only a returned slot)
+        if (auth != null)
+            auth.Should().BeOfType<CentralAuthorization>();
     }
 
     [Fact]

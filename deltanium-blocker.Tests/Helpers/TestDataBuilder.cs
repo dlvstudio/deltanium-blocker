@@ -91,20 +91,21 @@ public static class TestDataBuilder
 
     public static Block CreateGenesisBlock()
     {
-        return new Block
+        // A consistent genesis: merkle root and id derived the way BlockValidator checks them.
+        var block = new Block
         {
-            Id = "genesis",
             PreviousId = string.Empty,
             Height = 0,
             Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             Transactions = new List<Transaction>(),
-            MerkleRoot = string.Empty,
             CreatorPublicKey = "genesis",
             CentralAuthorizationSignature = string.Empty,
             CentralApiPublicKey = string.Empty,
             CreatorSignature = string.Empty,
             Version = "1.0.0"
         };
+        block = block with { MerkleRoot = Block.CalculateMerkleRoot(block.Transactions) };
+        return block with { Id = Block.Hash(Block.IdPayload(block)) };
     }
 
     public static NodeConfig CreateNodeConfig(

@@ -28,7 +28,7 @@ public class BlockValidatorTests
         var result = validator.Validate(block, state, out var reason);
 
         // Assert
-        result.Should().BeTrue();
+        result.Should().BeTrue(reason);
         reason.Should().BeEmpty();
     }
 
