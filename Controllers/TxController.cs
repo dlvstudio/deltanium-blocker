@@ -6,6 +6,7 @@ using Deltanium.Blocker.Core;
 using Deltanium.Blocker.Services;
 using Deltanium.Blocker.Services.Utils;
 using Deltanium.Blocker.Core.Models;
+using Deltanium.Blocker.Services.Ledger;
 
 namespace Deltanium.Blocker.Controllers
 {
@@ -19,6 +20,7 @@ namespace Deltanium.Blocker.Controllers
         private readonly ILogger<TxController> _logger;
         private readonly TransactionValidationService _validationService;
         private readonly MetricsService _metrics;
+        private readonly BalanceCheckService? _balances;
 
         public TxController(
             TransactionPool txPool,
@@ -26,8 +28,10 @@ namespace Deltanium.Blocker.Controllers
             NodeConfig nodeConfig,
             ILogger<TxController> logger,
             TransactionValidationService validationService,
-            MetricsService metrics)
+            MetricsService metrics,
+            BalanceCheckService? balances = null)
         {
+            _balances = balances;
             _txPool = txPool;
             _decisionClient = decisionClient;
             _nodeConfig = nodeConfig;
@@ -86,6 +90,15 @@ namespace Deltanium.Blocker.Controllers
                     return BadRequest(new { error });
                 }
             }
+            else if (txType == TransactionType.TopUp)
+            {
+                if (!_validationService.ValidateTopUp(req, out var error))
+                {
+                    _logger.LogWarning("Invalid TopUp tx {TxId}: {Error}. Returning 400.", req.Id, error);
+                    _metrics.IncrementInvalid();
+                    return BadRequest(new { error });
+                }
+            }
             else
             {
                 if (string.IsNullOrWhiteSpace(req.SignPayload) ||
@@ -94,6 +107,41 @@ namespace Deltanium.Blocker.Controllers
                     _logger.LogWarning($"Invalid tx signature for tx {req.Id}. Returning 400.");
                     _metrics.IncrementInvalid();
                     return BadRequest(new { error = "Invalid tx signature" });
+                }
+            }
+
+            var hold = false;
+            var holdDetail = "";
+            // TOKENOMICS_V2 §11 phase B: value moves carry the user's signed request; check it and the balance.
+            if (BalanceCheckService.ValueTypes.Contains(txType) && _balances != null && _balances.Mode != "off")
+            {
+                if (!BalanceCheckService.TryParseAuth(txType, req.To, req.SignPayload, req.Data, out var auth, out var authError))
+                {
+                    if (_balances.Mode == "enforce")
+                    {
+                        _logger.LogWarning("Value tx {TxId} rejected: {Error}", req.Id, authError);
+                        _metrics.IncrementInvalid();
+                        return BadRequest(new { error = authError });
+                    }
+                    _logger.LogWarning("Value tx {TxId} not verifiable ({Error}); accepted in warn mode", req.Id, authError);
+                }
+                else
+                {
+                    var (verdict, detail) = await _balances.CheckAsync(req.Id, req.From, req.Signature, auth!);
+                    if (_balances.Defers(verdict))
+                    {
+                        hold = true;
+                        holdDetail = detail;
+                    }
+                    else if (verdict == BalanceVerdict.Invalid || !_balances.Accepts(verdict))
+                    {
+                        _logger.LogWarning("Value tx {TxId} rejected: {Verdict} {Detail}", req.Id, verdict, detail);
+                        _metrics.IncrementRejected();
+                        return verdict == BalanceVerdict.Unverifiable
+                            ? StatusCode(503, new { error = detail, verdict = verdict.ToString() })
+                            : BadRequest(new { error = detail, verdict = verdict.ToString() });
+                    }
+                    _logger.LogInformation("Value tx {TxId}: {Verdict} {Detail}", req.Id, verdict, detail);
                 }
             }
 
@@ -132,7 +180,16 @@ namespace Deltanium.Blocker.Controllers
                 Signature = req.Signature
             };
 
-            if (_txPool.TryAdd(tx))
+            if (hold)
+            {
+                // Held out of blocks until a ledger anchor covers the move; then promoted or dropped.
+                if (_txPool.TryDefer(tx))
+                {
+                    _logger.LogInformation("Value tx {TxId} held: {Detail}", tx.Id, holdDetail);
+                    return Accepted(new { status = "pending", txId = tx.Id, verdict = nameof(BalanceVerdict.Unverifiable), detail = holdDetail });
+                }
+            }
+            else if (_txPool.TryAdd(tx))
             {
                 _logger.LogInformation($"Accepted transaction {tx.Id} of type {tx.Type}.");
                 _metrics.IncrementAccepted();

@@ -45,11 +45,23 @@ namespace Deltanium.Blocker.Services
                 }
             }
 
-            // Generate mnemonic and key pair
-            _logger.LogInformation("[REGISTRATION] Generating new key pair...");
-            var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
-            var hdRoot = mnemonic.DeriveExtKey();
-            var privateKey = hdRoot.PrivateKey;
+            // Key: NODE_PRIVATE_KEY (DPAPI env, set up front by the operator) if present, so the key is never
+            // written to disk; otherwise generate one (stored in node_info.json until moved to DPAPI).
+            Key privateKey;
+            Mnemonic? mnemonic = null;
+            var envKey = Environment.GetEnvironmentVariable("NODE_PRIVATE_KEY")?.Trim();
+            if (!string.IsNullOrEmpty(envKey))
+            {
+                _logger.LogInformation("[REGISTRATION] Registering with the key from NODE_PRIVATE_KEY (DPAPI env)...");
+                privateKey = new Key(Convert.FromHexString(envKey));
+            }
+            else
+            {
+                _logger.LogInformation("[REGISTRATION] Generating new key pair...");
+                mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
+                privateKey = mnemonic.DeriveExtKey().PrivateKey;
+            }
+            var keyFromEnv = mnemonic == null;
             var publicKey = privateKey.PubKey;
             var publicKeyHex = publicKey.ToHex();
 
@@ -73,8 +85,8 @@ namespace Deltanium.Blocker.Services
                 // Save mnemonic, privateKey, publicKey, and node info
                 var nodeInfo = new NodeInfo
                 {
-                    Mnemonic = mnemonic.ToString(),
-                    PrivateKey = privateKey.ToHex(),
+                    Mnemonic = keyFromEnv ? string.Empty : mnemonic!.ToString(),
+                    PrivateKey = keyFromEnv ? string.Empty : privateKey.ToHex(),
                     PublicKey = publicKeyHex,
                     Endpoint = _endpoint,
                     ApiResponse = apiResponse
@@ -84,6 +96,8 @@ namespace Deltanium.Blocker.Services
                 _logger.LogInformation("[REGISTRATION] Block Creator node registered successfully!");
                 _logger.LogInformation($"[REGISTRATION] Public Key: {publicKeyHex.Substring(0, Math.Min(20, publicKeyHex.Length))}...");
                 _logger.LogInformation($"[REGISTRATION] Node info saved to {_nodeInfoPath}");
+                if (!keyFromEnv)
+                    _logger.LogWarning("[REGISTRATION] node_info.json now holds the node key in plaintext. Move it to DPAPI with scripts/deploy/Move-NodeKeysToDpapi.ps1.");
 
                 return new NodeRegistrationResult
                 {
@@ -91,7 +105,7 @@ namespace Deltanium.Blocker.Services
                     AlreadyRegistered = false,
                     PublicKey = publicKeyHex,
                     PrivateKey = privateKey.ToHex(),
-                    Mnemonic = mnemonic.ToString()
+                    Mnemonic = mnemonic?.ToString()
                 };
             }
             else

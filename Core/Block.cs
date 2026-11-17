@@ -21,6 +21,20 @@ namespace Deltanium.Blocker.Core
         /// <summary>Block format / node version that created this block (e.g. "1.0.0").</summary>
         public string Version { get; init; } = "1.0.0";
 
+        /// <summary>TOKENOMICS_V2 §11: Central wallet ledger anchor committed by this block (0/empty = none).</summary>
+        public long LedgerAnchorSeq { get; init; }
+        public string LedgerRoot { get; init; } = string.Empty;
+        public string BalancesRoot { get; init; } = string.Empty;
+
+        /// <summary>Preimage of the block id. Anchor fields are appended only when present (pre-anchor blocks keep their ids).</summary>
+        public static string IdPayload(Block b)
+        {
+            var s = $"{b.PreviousId}:{b.Height}:{b.Timestamp}:{b.MerkleRoot}:{b.CreatorPublicKey}";
+            if (!string.IsNullOrEmpty(b.LedgerRoot))
+                s += $":{b.LedgerAnchorSeq}:{b.LedgerRoot}:{b.BalancesRoot}";
+            return s;
+        }
+
         public static string CalculateMerkleRoot(IEnumerable<Transaction> txs)
         {
             var hashes = txs.Select(tx => Hash(tx.Id)).ToList();

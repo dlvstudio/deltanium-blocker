@@ -60,6 +60,8 @@ namespace Deltanium.Blocker.Services
                     return null;
                 }
                 var toSign = $"BLOCK_SLOT|{p.BlockerPubKey}|{p.IssuedAt}|{p.ExpiresAt}|{p.Nonce}|{p.Granted}";
+                if (!string.IsNullOrEmpty(p.LedgerRoot))
+                    toSign += $"|{p.LedgerAnchorSeq}|{p.LedgerRoot}|{p.BalancesRoot}";
                 var pubKeyToUse = string.IsNullOrWhiteSpace(_config.CentralApiPublicKey) ? response.CentralPublicKey : _config.CentralApiPublicKey;
                 if (string.IsNullOrWhiteSpace(pubKeyToUse))
                 {
@@ -76,7 +78,8 @@ namespace Deltanium.Blocker.Services
                     _logger.LogWarning("[COORDINATOR] Invalid block-slot signature.");
                     return null;
                 }
-                return new CentralAuthorization(response.Signature, response.CentralPublicKey ?? string.Empty);
+                return new CentralAuthorization(response.Signature, response.CentralPublicKey ?? string.Empty,
+                    p.LedgerAnchorSeq, p.LedgerRoot, p.BalancesRoot);
             }
             catch (Exception ex)
             {
@@ -98,6 +101,9 @@ namespace Deltanium.Blocker.Services
             public long ExpiresAt { get; set; }
             public string Nonce { get; set; } = string.Empty;
             public bool Granted { get; set; }
+            public long LedgerAnchorSeq { get; set; }
+            public string? LedgerRoot { get; set; }
+            public string? BalancesRoot { get; set; }
         }
 
         private class BlockSlotResponse

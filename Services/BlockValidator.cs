@@ -48,7 +48,7 @@ namespace Deltanium.Blocker.Services
                 return false;
             }
 
-            var expectedBlockId = Block.Hash($"{block.PreviousId}:{block.Height}:{block.Timestamp}:{block.MerkleRoot}:{block.CreatorPublicKey}");
+            var expectedBlockId = Block.Hash(Block.IdPayload(block));
             if (!string.Equals(expectedBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
             {
                 reason = "Block id mismatch";

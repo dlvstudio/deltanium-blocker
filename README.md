@@ -2,19 +2,9 @@
 
 A .NET implementation of the Block Creator node for the Deltanium blockchain network. This node is responsible for processing transactions, creating blocks, and validating blocks created by other nodes in the network.
 
-## Production
-
-| | URL |
-|--|-----|
-| **Block creator 1** | [https://blocker-1.deltanium.com](https://blocker-1.deltanium.com) |
-| Central API | [https://api.deltanium.com](https://api.deltanium.com) |
-| App | [https://app.deltanium.com](https://app.deltanium.com) |
-
-Local default: `http://127.0.0.1:5003`.
-
 ## Overview
 
-The Deltanium Block Creator node is a critical component of the Deltanium blockchain infrastructure. It works in coordination with the Central Coordination Node ([api.deltanium.com](https://api.deltanium.com)) to maintain the blockchain by:
+The Deltanium Block Creator node is a critical component of the Deltanium blockchain infrastructure. It works in coordination with the Central Coordination Node (deltanium.com) to maintain the blockchain by:
 
 - Receiving and validating transactions from the network
 - Creating new blocks when authorized by the Central Node
@@ -134,7 +124,7 @@ public class NodeConfig
 {
     public string NodePublicKey { get; init; } = "NODE_PUBKEY_PLACEHOLDER";
     public string NodePrivateKey { get; init; } = "NODE_PRIVKEY_PLACEHOLDER";
-    public Uri CentralEndpoint { get; init; } = new Uri("https://api.deltanium.com");
+    public Uri CentralEndpoint { get; init; } = new Uri("https://deltanium.com");
     public TimeSpan BlockCreationInterval { get; init; } = TimeSpan.FromSeconds(10);
     public TimeSpan ValidationPollInterval { get; init; } = TimeSpan.FromSeconds(5);
 }
@@ -145,6 +135,7 @@ public class NodeConfig
 - `NodePrivateKey`: Your node's private key (keep secure!)
 - `CentralEndpoint`: URL of the Central Coordination Node
 - `CentralApiPublicKey`: Trusted Central API public key for verifying decision and block-slot signatures. Set via **`CENTRAL_API_PUBLIC_KEY`** env, or the node will try to fetch it from `GET /api/blockcreatornode/decision-key` at startup. If not set, the node falls back to using the key from the API response (less secure; use in dev only).
+- `SuperAdminPublicKey`: Required to accept **TopUp** txs (fiat on-ramp). Set via **`SUPER_ADMIN_PUBLIC_KEY`** (same public key as Central API). TopUp requires Central + Super Admin signatures over `SignPayload`; `From` must be the Central public key.
 - `BlockCreationInterval`: How often to check for block creation authorization
 - `ValidationPollInterval`: How often to validate incoming blocks
 
@@ -291,7 +282,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[Add license information here]
 
 ## Related Projects
 

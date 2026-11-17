@@ -20,6 +20,7 @@ DpapiEnvironment.LoadSiteProgramDataSecrets();
 DpapiEnvironment.ExpandProcessEnvironment();
 
 // --- Serilog Configuration (START) ---
+_ = BuildInfo.StartedAtUtc;
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -33,7 +34,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting Blocker Web Host");
+    Log.Information("Starting Blocker Web Host {Version} on {Network}", BuildInfo.Summary, NetworkScope.Name);
 
     // Load configuration
     var config = NodeConfig.LoadDefaults();
@@ -46,33 +47,13 @@ try
         var uri = Uri.TryCreate(centralApiUrl.Trim(), UriKind.Absolute, out var u) && (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps) ? u : null;
         if (uri != null)
         {
-            config = new NodeConfig
-            {
-                NodePublicKey = config.NodePublicKey,
-                NodePrivateKey = config.NodePrivateKey,
-                CentralEndpoint = uri,
-                CentralApiPublicKey = config.CentralApiPublicKey,
-                NodeEndpoint = config.NodeEndpoint,
-                BlockCreationInterval = config.BlockCreationInterval,
-                ValidationPollInterval = config.ValidationPollInterval,
-                BlockVersion = config.BlockVersion
-            };
+            config = config.With(centralEndpoint: uri);
         }
     }
     var blockVersion = builder.Configuration["BlockVersion"];
     if (!string.IsNullOrWhiteSpace(blockVersion))
     {
-        config = new NodeConfig
-        {
-            NodePublicKey = config.NodePublicKey,
-            NodePrivateKey = config.NodePrivateKey,
-            CentralEndpoint = config.CentralEndpoint,
-            CentralApiPublicKey = config.CentralApiPublicKey,
-            NodeEndpoint = config.NodeEndpoint,
-            BlockCreationInterval = config.BlockCreationInterval,
-            ValidationPollInterval = config.ValidationPollInterval,
-            BlockVersion = blockVersion.Trim()
-        };
+        config = config.With(blockVersion: blockVersion.Trim());
     }
 
     var apiUrl = config.CentralEndpoint.ToString().TrimEnd('/');
@@ -92,17 +73,7 @@ try
                 var pk = keyDoc.RootElement.GetProperty("publicKey").GetString();
                 if (!string.IsNullOrWhiteSpace(pk))
                 {
-                    config = new NodeConfig
-                    {
-                        NodePublicKey = config.NodePublicKey,
-                        NodePrivateKey = config.NodePrivateKey,
-                        CentralEndpoint = config.CentralEndpoint,
-                        CentralApiPublicKey = pk.Trim(),
-                        NodeEndpoint = config.NodeEndpoint,
-                        BlockCreationInterval = config.BlockCreationInterval,
-                        ValidationPollInterval = config.ValidationPollInterval,
-                        BlockVersion = config.BlockVersion
-                    };
+                    config = config.With(centralApiPublicKey: pk.Trim());
                     Log.Information("Fetched Central API public key from decision-key endpoint.");
                 }
             }
@@ -177,17 +148,10 @@ try
         && !string.IsNullOrWhiteSpace(registrationResult.PublicKey)
         && !string.IsNullOrWhiteSpace(registrationResult.PrivateKey))
     {
-        config = new NodeConfig
-        {
-            NodePublicKey = registrationResult.PublicKey,
-            NodePrivateKey = registrationResult.PrivateKey,
-            CentralEndpoint = config.CentralEndpoint,
-            CentralApiPublicKey = config.CentralApiPublicKey,
-            NodeEndpoint = nodeEndpoint,
-            BlockCreationInterval = config.BlockCreationInterval,
-            ValidationPollInterval = config.ValidationPollInterval,
-            BlockVersion = config.BlockVersion
-        };
+        config = config.With(
+            nodePublicKey: registrationResult.PublicKey,
+            nodePrivateKey: registrationResult.PrivateKey,
+            nodeEndpoint: nodeEndpoint);
     }
     else
     {
@@ -196,13 +160,16 @@ try
 
     builder.Services.AddSingleton(config);
 
-    if (config.NodePublicKey == "NODE_PUBKEY_PLACEHOLDER" || config.NodePrivateKey == "NODE_PRIVKEY_PLACEHOLDER")
+    if (config.NodePublicKey == "NODE_PUBKEY_PLACEHOLDER" || config.NodePrivateKey == "NODE_PRIVKEY_PLACEHOLDER" ||
+        string.IsNullOrWhiteSpace(config.NodePrivateKey))
     {
-        Log.Error("Node keys not found. Please ensure node_info.json exists or registration completed successfully.");
+        Log.Error("Node keys not found. Set NODE_PRIVATE_KEY (DPAPI, ProgramData env) or complete registration (node_info.json).");
         Environment.Exit(1);
     }
 
     Log.Information($"Node Public Key: {config.NodePublicKey.Substring(0, Math.Min(20, config.NodePublicKey.Length))}...");
+    Log.Information("Node key source: {Source}", !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NODE_PRIVATE_KEY"))
+        ? "NODE_PRIVATE_KEY (DPAPI env)" : "node_info.json (plaintext; run Move-NodeKeysToDpapi.ps1)");
     Log.Information($"Central API: {config.CentralEndpoint}");
     Log.Information($"Node Endpoint: {nodeEndpoint}");
     if (useLocalDecision)
@@ -248,8 +215,20 @@ try
     builder.Services.AddSingleton<BlockBuilder>(provider =>
         new BlockBuilder(config, provider.GetRequiredService<TransactionPool>(), provider.GetRequiredService<NodeState>(), provider.GetRequiredService<ILogger<BlockBuilder>>()));
     builder.Services.AddSingleton<TransactionValidationService>(provider =>
-        new TransactionValidationService(provider.GetRequiredService<ILogger<TransactionValidationService>>(), config.CentralApiPublicKey));
+        new TransactionValidationService(
+            provider.GetRequiredService<ILogger<TransactionValidationService>>(),
+            config.CentralApiPublicKey,
+            config.SuperAdminPublicKey));
     builder.Services.AddSingleton<MetricsService>();
+    builder.Services.AddSingleton<Deltanium.Blocker.Services.Ledger.ILedgerProofClient>(_ =>
+        new Deltanium.Blocker.Services.Ledger.LedgerProofClient(config.CentralEndpoint));
+    builder.Services.AddSingleton<Deltanium.Blocker.Services.Ledger.BalanceCheckService>(provider =>
+        new Deltanium.Blocker.Services.Ledger.BalanceCheckService(
+            provider.GetRequiredService<Deltanium.Blocker.Services.Ledger.ILedgerProofClient>(),
+            provider.GetRequiredService<NodeState>(),
+            provider.GetRequiredService<TransactionPool>(),
+            builder.Configuration["Ledger:BalanceCheck"],
+            provider.GetRequiredService<ILogger<Deltanium.Blocker.Services.Ledger.BalanceCheckService>>()));
     builder.Services.AddSingleton<NodeHost>();
 
     Log.Information("Starting Deltanium Block Creator node (MVP)...");
@@ -279,6 +258,7 @@ try
     app.UseAuthorization();
     app.MapControllers();
     app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+    app.MapGet("/api/version", () => Results.Ok(BuildInfo.Describe("blocker")));
     app.MapGet("/metrics", (MetricsService metrics) => Results.Ok(metrics.Snapshot()));
 
     // Start NodeHost in a background task

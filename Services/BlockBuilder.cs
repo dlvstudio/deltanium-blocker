@@ -46,10 +46,13 @@ namespace Deltanium.Blocker.Services
                 CreatorPublicKey = _config.NodePublicKey,
                 CentralAuthorizationSignature = auth.Signature,
                 CentralApiPublicKey = !string.IsNullOrWhiteSpace(auth.CentralPublicKey) ? auth.CentralPublicKey : (_config.CentralApiPublicKey ?? string.Empty),
-                Version = string.IsNullOrWhiteSpace(_config.BlockVersion) ? "1.0.0" : _config.BlockVersion.Trim()
+                Version = string.IsNullOrWhiteSpace(_config.BlockVersion) ? "1.0.0" : _config.BlockVersion.Trim(),
+                LedgerAnchorSeq = auth.LedgerAnchorSeq,
+                LedgerRoot = auth.LedgerRoot ?? string.Empty,
+                BalancesRoot = auth.BalancesRoot ?? string.Empty
             };
 
-            var blockId = CoreBlock.Hash($"{block.PreviousId}:{block.Height}:{block.Timestamp}:{block.MerkleRoot}:{block.CreatorPublicKey}");
+            var blockId = CoreBlock.Hash(CoreBlock.IdPayload(block));
             block = block with
             {
                 Id = blockId,
@@ -67,7 +70,7 @@ namespace Deltanium.Blocker.Services
             {
                 var key = new Key(Convert.FromHexString(_config.NodePrivateKey));
                 using var sha256 = SHA256.Create();
-                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(payload));
+                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(NetworkScope.Scope(payload)));
                 var sig = key.Sign(new uint256(hashBytes));
                 var der = sig.ToDER();
                 return Convert.ToBase64String(der);
@@ -80,7 +83,12 @@ namespace Deltanium.Blocker.Services
         }
     }
 
-    public record CentralAuthorization(string Signature, string CentralPublicKey);
+    public record CentralAuthorization(
+        string Signature,
+        string CentralPublicKey,
+        long LedgerAnchorSeq = 0,
+        string? LedgerRoot = null,
+        string? BalancesRoot = null);
 }
 
 

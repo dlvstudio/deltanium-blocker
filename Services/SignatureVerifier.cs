@@ -2,6 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 using NBitcoin;
+using Deltanium.Blocker.Core;
 
 namespace Deltanium.Blocker.Services
 {
@@ -13,7 +14,7 @@ namespace Deltanium.Blocker.Services
             {
                 var pubKey = new PubKey(publicKey);
                 using var sha256 = SHA256.Create();
-                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(message));
+                var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(NetworkScope.Scope(message)));
                 var signatureBytes = Convert.FromBase64String(signatureBase64);
 
                 var hashLE = new uint256(hashBytes);

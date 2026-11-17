@@ -12,6 +12,7 @@ namespace Deltanium.Blocker.Core.Models
         [property: JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] long Timestamp,
         string Fee,
         string Signature,
-        string SignPayload
+        string SignPayload,
+        string? SuperAdminSignature = null
     );
 }

@@ -261,11 +261,29 @@ public class BlockBuilderTests
         // Assert
         block.Transactions.Should().HaveCount(100);
     }
+
+    [Fact]
+    public void BuildBlock_WithLedgerAnchor_CommitsAnchorIntoBlockId()
+    {
+        var config = TestDataBuilder.CreateNodeConfig();
+        var pool = new TransactionPool(TestDataBuilder.CreateTempMempoolPath(), TestDataBuilder.CreateLogger<TransactionPool>());
+        var state = new NodeState(TestDataBuilder.CreateTempBlockStore());
+        var builder = new BlockBuilder(config, pool, state, TestDataBuilder.CreateLogger<BlockBuilder>());
+        var auth = new CentralAuthorization("sig", "central", 7, new string('a', 64), new string('b', 64));
+
+        var block = builder.BuildBlock(auth);
+
+        block.LedgerAnchorSeq.Should().Be(7);
+        block.LedgerRoot.Should().Be(new string('a', 64));
+        block.Id.Should().Be(Block.Hash(Block.IdPayload(block)));
+        var tampered = block with { LedgerRoot = new string('c', 64) };
+        Block.Hash(Block.IdPayload(tampered)).Should().NotBe(block.Id);
+    }
+
+    [Fact]
+    public void IdPayload_WithoutAnchor_MatchesLegacyFormat()
+    {
+        var b = new Block { PreviousId = "p", Height = 1, Timestamp = 2, MerkleRoot = "m", CreatorPublicKey = "c" };
+        Block.IdPayload(b).Should().Be("p:1:2:m:c");
+    }
 }
-
-
-
-
-
-
-

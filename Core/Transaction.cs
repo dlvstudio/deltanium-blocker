@@ -14,7 +14,9 @@ namespace Deltanium.Blocker.Core
         NodeRegistration,
         StorageOperation,
         Transfer,
-        Donate
+        Donate,
+        /// <summary>Fiat on-ramp: treasury/Central credits D to user. Requires Central + Super Admin signatures.</summary>
+        TopUp
     }
 
     public record Transaction

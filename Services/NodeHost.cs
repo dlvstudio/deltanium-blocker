@@ -17,6 +17,8 @@ namespace Deltanium.Blocker.Services
         private readonly NodeState _state;
         private readonly CancellationTokenSource _cts = new();
         private readonly ILogger<NodeHost> _logger;
+        private readonly Ledger.BalanceCheckService? _balances;
+        private DateTime _lastDeferredCheck = DateTime.MinValue;
 
         public NodeHost(
             NodeConfig config,
@@ -25,8 +27,10 @@ namespace Deltanium.Blocker.Services
             BlockValidator validator,
             CentralCoordinatorClient coordinator,
             NodeState state,
-            ILogger<NodeHost> logger)
+            ILogger<NodeHost> logger,
+            Ledger.BalanceCheckService? balances = null)
         {
+            _balances = balances;
             _config = config;
             _pool = pool;
             _builder = builder;
@@ -71,8 +75,11 @@ namespace Deltanium.Blocker.Services
             {
                 try
                 {
-                    if (_pool.Count == 0)
+                    // A held value tx needs a fresh ledger anchor, which only comes with a block (possibly empty).
+                    var needAnchor = _pool.DeferredAwaitingAnchor && _pool.DeferredCount > 0;
+                    if (_pool.Count == 0 && !needAnchor)
                     {
+                        await CheckDeferredAsync(force: false);
                         await Task.Delay(_config.BlockCreationInterval, token);
                         continue;
                     }
@@ -89,6 +96,8 @@ namespace Deltanium.Blocker.Services
                             _state.AddBlock(block);
                             _pool.Remove(block.Transactions.Select(t => t.Id));
                             _logger.LogInformation($"[BLOCK] Accepted block {block.Id}");
+                            _pool.DeferredAwaitingAnchor = false;
+                            await CheckDeferredAsync(force: true);
                         }
                         else
                         {
@@ -105,7 +114,16 @@ namespace Deltanium.Blocker.Services
             }
         }
 
-        
+        /// <summary>Re-check held value txs after each block, and every 30 s while idle (so they expire).</summary>
+        private async Task CheckDeferredAsync(bool force)
+        {
+            if (_balances == null || _pool.DeferredCount == 0) return;
+            if (!force && DateTime.UtcNow - _lastDeferredCheck < TimeSpan.FromSeconds(30)) return;
+            _lastDeferredCheck = DateTime.UtcNow;
+            var (promoted, dropped, waiting) = await _balances.ProcessDeferredAsync();
+            if (promoted + dropped > 0)
+                _logger.LogInformation("[MEMPOOL] Held value txs: {Promoted} verified, {Dropped} dropped, {Waiting} waiting", promoted, dropped, waiting);
+        }
     }
 }
 

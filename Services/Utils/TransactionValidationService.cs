@@ -15,11 +15,16 @@ namespace Deltanium.Blocker.Services.Utils
     {
         private readonly ILogger<TransactionValidationService> _logger;
         private readonly string? _trustedCentralPublicKey;
+        private readonly string? _trustedSuperAdminPublicKey;
 
-        public TransactionValidationService(ILogger<TransactionValidationService> logger, string? trustedCentralPublicKey = null)
+        public TransactionValidationService(
+            ILogger<TransactionValidationService> logger,
+            string? trustedCentralPublicKey = null,
+            string? trustedSuperAdminPublicKey = null)
         {
             _logger = logger;
             _trustedCentralPublicKey = string.IsNullOrWhiteSpace(trustedCentralPublicKey) ? null : trustedCentralPublicKey.Trim();
+            _trustedSuperAdminPublicKey = string.IsNullOrWhiteSpace(trustedSuperAdminPublicKey) ? null : trustedSuperAdminPublicKey.Trim();
         }
 
         public bool ValidateStorageOperation(BlockerTxRequest req, out string error)
@@ -218,6 +223,94 @@ namespace Deltanium.Blocker.Services.Utils
 
             _logger.LogWarning("BuildContractMessage failed: Unknown contract type {ContractType}.", contract.ContractType);
             return string.Empty;
+        }
+
+        /// <summary>
+        /// TopUp: From must be Central; Central signs SignPayload; Super Admin also signs SignPayload.
+        /// Data must include orderId and dCredited. Credit application stays on Central wallet ledger after accept.
+        /// </summary>
+        public bool ValidateTopUp(BlockerTxRequest req, out string error)
+        {
+            error = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(_trustedCentralPublicKey))
+            {
+                error = "Central public key not configured on blocker";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(_trustedSuperAdminPublicKey))
+            {
+                error = "Super Admin public key not configured on blocker (SUPER_ADMIN_PUBLIC_KEY)";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(req.To))
+            {
+                error = "TopUp requires To (buyer public key)";
+                return false;
+            }
+            if (!string.Equals(req.From?.Trim(), _trustedCentralPublicKey, StringComparison.OrdinalIgnoreCase))
+            {
+                error = "TopUp From must be Central public key";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(req.SignPayload) || string.IsNullOrWhiteSpace(req.Signature))
+            {
+                error = "TopUp requires SignPayload and Signature (Central)";
+                return false;
+            }
+            if (string.IsNullOrWhiteSpace(req.SuperAdminSignature))
+            {
+                error = "TopUp requires SuperAdminSignature";
+                return false;
+            }
+            if (req.Data.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                error = "TopUp requires data";
+                return false;
+            }
+            if (!req.Data.TryGetProperty("orderId", out var orderIdEl) ||
+                string.IsNullOrWhiteSpace(orderIdEl.GetString()))
+            {
+                error = "TopUp data.orderId required";
+                return false;
+            }
+            if (!req.Data.TryGetProperty("dCredited", out var creditedEl))
+            {
+                error = "TopUp data.dCredited required";
+                return false;
+            }
+            if (creditedEl.ValueKind == JsonValueKind.Number)
+            {
+                if (!creditedEl.TryGetDecimal(out var amt) || amt <= 0)
+                {
+                    error = "TopUp data.dCredited must be positive";
+                    return false;
+                }
+            }
+            else if (!decimal.TryParse(creditedEl.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var amtStr) || amtStr <= 0)
+            {
+                error = "TopUp data.dCredited must be positive";
+                return false;
+            }
+
+            if (!string.Equals(req.Id?.Trim(), orderIdEl.GetString()?.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                error = "TopUp Id must equal data.orderId";
+                return false;
+            }
+
+            if (!SignatureVerifier.Verify(_trustedCentralPublicKey, req.SignPayload, req.Signature))
+            {
+                error = "Invalid Central signature on TopUp";
+                return false;
+            }
+            if (!SignatureVerifier.Verify(_trustedSuperAdminPublicKey, req.SignPayload, req.SuperAdminSignature))
+            {
+                error = "Invalid Super Admin signature on TopUp";
+                return false;
+            }
+
+            return true;
         }
 
         public bool VerifyDecision(DecisionResponse response, string expectedTxId, string blockerPubKey)
