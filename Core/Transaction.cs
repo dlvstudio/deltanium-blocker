@@ -29,6 +29,8 @@ namespace Deltanium.Blocker.Core
         public long Timestamp { get; init; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         public decimal Fee { get; init; }
         public string Signature { get; init; } = string.Empty;
+        /// <summary>Signed build versions of the components that handled this tx (api, store, blocker). Empty on older txs.</summary>
+        public List<VersionAttestation> Versions { get; init; } = new();
     }
 }
 

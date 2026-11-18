@@ -158,7 +158,8 @@ namespace Deltanium.Blocker.Controllers
                         tx.Data,
                         block.Height,
                         block.Id,
-                        "confirmed");
+                        "confirmed",
+                        tx.Versions);
                 }
             }
         }
@@ -178,7 +179,8 @@ namespace Deltanium.Blocker.Controllers
                     tx.Data,
                     -1,
                     null,
-                    "pending");
+                    "pending",
+                    tx.Versions);
             }
         }
 
@@ -197,7 +199,8 @@ namespace Deltanium.Blocker.Controllers
             t.Status,
             blockHeight = t.BlockHeight < 0 ? (long?)null : t.BlockHeight,
             blockId = t.BlockId,
-            data = includeData ? t.Data : null
+            data = includeData ? t.Data : null,
+            versions = includeData ? t.Versions : null
         };
 
         private sealed record TxRow(
@@ -211,6 +214,7 @@ namespace Deltanium.Blocker.Controllers
             Dictionary<string, object> Data,
             long BlockHeight,
             string? BlockId,
-            string Status);
+            string Status,
+            List<VersionAttestation>? Versions);
     }
 }

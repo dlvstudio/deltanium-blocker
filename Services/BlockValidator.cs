@@ -48,6 +48,14 @@ namespace Deltanium.Blocker.Services
                 return false;
             }
 
+            var badVersion = block.Transactions.FirstOrDefault(tx => (tx.Versions ?? new()).Any(v => !v.IsValidFor(tx.Id)));
+            if (badVersion != null)
+            {
+                reason = "Invalid version signature";
+                _logger.LogWarning($"Validation failed for block {block.Id}: {reason} on tx {badVersion.Id}");
+                return false;
+            }
+
             var expectedBlockId = Block.Hash(Block.IdPayload(block));
             if (!string.Equals(expectedBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
             {

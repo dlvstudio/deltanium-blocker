@@ -110,6 +110,13 @@ namespace Deltanium.Blocker.Controllers
                 }
             }
 
+            if (!TryCollectVersions(req, txType, decision, _nodeConfig.NodePrivateKey, out var versions, out var versionError))
+            {
+                _logger.LogWarning("Tx {TxId} rejected: {Error}", req.Id, versionError);
+                _metrics.IncrementInvalid();
+                return BadRequest(new { error = versionError });
+            }
+
             var hold = false;
             var holdDetail = "";
             // TOKENOMICS_V2 §11 phase B: value moves carry the user's signed request; check it and the balance.
@@ -177,7 +184,8 @@ namespace Deltanium.Blocker.Controllers
                 Data = dataDict,
                 Timestamp = timestamp,
                 Fee = feeDecimal,
-                Signature = req.Signature
+                Signature = req.Signature,
+                Versions = versions
             };
 
             if (hold)
@@ -199,6 +207,56 @@ namespace Deltanium.Blocker.Controllers
             _logger.LogWarning($"Received duplicate transaction {tx.Id}. Returning 409 Conflict.");
             _metrics.IncrementRejected();
             return Conflict(new { error = "Duplicate tx" });
+        }
+
+        /// <summary>
+        /// Every tx records which builds handled it, each signed by that component: the API's (from Central's decision),
+        /// the submitting Store's (StorageOperation) and this Blocker's own.
+        /// </summary>
+        public static bool TryCollectVersions(BlockerTxRequest req, TransactionType txType, DecisionResponse? decision,
+            string blockerPrivateKeyHex, out List<VersionAttestation> versions, out string error)
+        {
+            versions = new List<VersionAttestation>();
+            error = string.Empty;
+
+            if (decision != null)
+            {
+                var api = decision.Version;
+                if (api == null)
+                {
+                    error = "Central decision carries no signed API version";
+                    return false;
+                }
+                if (api.Service != VersionAttestation.Api ||
+                    !string.Equals(api.PublicKey, decision.CentralPublicKey, StringComparison.OrdinalIgnoreCase) ||
+                    !api.IsValidFor(req.Id))
+                {
+                    error = "Invalid API version signature";
+                    return false;
+                }
+                versions.Add(api);
+            }
+
+            if (req.Origin != null || txType == TransactionType.StorageOperation)
+            {
+                var store = req.Origin;
+                if (store == null)
+                {
+                    error = "StorageOperation must carry the Store's signed version (origin)";
+                    return false;
+                }
+                if (store.Service != VersionAttestation.Store ||
+                    !string.Equals(store.PublicKey, req.To, StringComparison.OrdinalIgnoreCase) ||
+                    !store.IsValidFor(req.Id))
+                {
+                    error = "Invalid Store version signature";
+                    return false;
+                }
+                versions.Add(store);
+            }
+
+            versions.Add(VersionAttestation.Create(req.Id, VersionAttestation.Blocker, BuildInfo.Version, BuildInfo.Commit, blockerPrivateKeyHex));
+            return true;
         }
     }
 }

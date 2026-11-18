@@ -52,6 +52,8 @@ namespace Deltanium.Blocker.Services
         public DecisionPayload Decision { get; set; } = new DecisionPayload();
         public string Signature { get; set; } = string.Empty;
         public string CentralPublicKey { get; set; } = string.Empty;
+        /// <summary>Central's signed API version for this tx (absent from older APIs).</summary>
+        public Deltanium.Blocker.Core.VersionAttestation? Version { get; set; }
     }
 
     public class DecisionPayload

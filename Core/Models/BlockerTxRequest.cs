@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Deltanium.Blocker.Core;
 
 namespace Deltanium.Blocker.Core.Models
 {
@@ -13,6 +14,8 @@ namespace Deltanium.Blocker.Core.Models
         string Fee,
         string Signature,
         string SignPayload,
-        string? SuperAdminSignature = null
+        string? SuperAdminSignature = null,
+        /// <summary>Signed version of the Store that submitted this tx (Stores only).</summary>
+        VersionAttestation? Origin = null
     );
 }
