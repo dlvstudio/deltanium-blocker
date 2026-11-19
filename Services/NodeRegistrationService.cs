@@ -68,6 +68,9 @@ namespace Deltanium.Blocker.Services
             var payload = new
             {
                 endpoint = _endpoint,
+                // Optional DLTP endpoint (tcps://host:port), served by the DLTP gateway in front of this node.
+                tcpEndpoint = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NODE_TCP_ENDPOINT"))
+                    ? null : Environment.GetEnvironmentVariable("NODE_TCP_ENDPOINT")!.Trim(),
                 voucher = _voucher,
                 publicKey = publicKeyHex
             };
