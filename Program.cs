@@ -235,6 +235,9 @@ try
 
     // Add services to the container.
     builder.Services.AddControllers();
+    var corsOrigins = CorsOrigins.Resolve(builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>());
+    builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(corsOrigins).AllowAnyMethod().AllowAnyHeader()));
+    Log.Information("CORS AllowedOrigins: {Origins}", string.Join(", ", corsOrigins));
     builder.Services.AddEndpointsApiExplorer();
 
     var app = builder.Build();
@@ -255,6 +258,7 @@ try
 
     app.UseSerilogRequestLogging();
     app.UseMiddleware<ExceptionHandlingMiddleware>();
+    app.UseCors();
     app.UseAuthorization();
     app.MapControllers();
     app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
