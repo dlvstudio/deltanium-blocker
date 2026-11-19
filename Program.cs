@@ -169,7 +169,7 @@ try
 
     Log.Information($"Node Public Key: {config.NodePublicKey.Substring(0, Math.Min(20, config.NodePublicKey.Length))}...");
     Log.Information("Node key source: {Source}", !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NODE_PRIVATE_KEY"))
-        ? "NODE_PRIVATE_KEY (DPAPI env)" : "node_info.json (plaintext; run Move-NodeKeysToDpapi.ps1)");
+        ? "NODE_PRIVATE_KEY (DPAPI env)" : "node_info.json (plaintext; move it to DPAPI with Scripts/Rotate-BlockerNodeKey.ps1)");
     Log.Information($"Central API: {config.CentralEndpoint}");
     Log.Information($"Node Endpoint: {nodeEndpoint}");
     if (useLocalDecision)

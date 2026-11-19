@@ -97,7 +97,7 @@ namespace Deltanium.Blocker.Services
                 _logger.LogInformation($"[REGISTRATION] Public Key: {publicKeyHex.Substring(0, Math.Min(20, publicKeyHex.Length))}...");
                 _logger.LogInformation($"[REGISTRATION] Node info saved to {_nodeInfoPath}");
                 if (!keyFromEnv)
-                    _logger.LogWarning("[REGISTRATION] node_info.json now holds the node key in plaintext. Move it to DPAPI with scripts/deploy/Move-NodeKeysToDpapi.ps1.");
+                    _logger.LogWarning("[REGISTRATION] node_info.json now holds the node key in plaintext. Rotate it into DPAPI with Scripts/Rotate-BlockerNodeKey.ps1.");
 
                 return new NodeRegistrationResult
                 {
