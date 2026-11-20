@@ -65,12 +65,18 @@ namespace Deltanium.Blocker.Services
             var publicKey = privateKey.PubKey;
             var publicKeyHex = publicKey.ToHex();
 
+            var tcpEndpoint = new[] { "NODE_TCP_ENDPOINT", "Dltp__PublicEndpoint" }
+                .Select(Environment.GetEnvironmentVariable).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
+            // A Block Creator on a home computer may have no HTTPS at all, only its DLTP listener: then do not
+            // register the local listen URL as its public endpoint.
+            var endpoint = tcpEndpoint != null && Uri.TryCreate(_endpoint, UriKind.Absolute, out var local) && local.IsLoopback
+                ? "" : _endpoint;
             var payload = new
             {
-                endpoint = _endpoint,
+                endpoint,
                 // Optional DLTP endpoint (tcps://host:port), served by the DLTP gateway in front of this node.
-                tcpEndpoint = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NODE_TCP_ENDPOINT"))
-                    ? null : Environment.GetEnvironmentVariable("NODE_TCP_ENDPOINT")!.Trim(),
+                // or the built-in listener's address (Dltp__PublicEndpoint, e.g. tcps://auto:7333 on a home computer).
+                tcpEndpoint,
                 voucher = _voucher,
                 publicKey = publicKeyHex
             };

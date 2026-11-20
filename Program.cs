@@ -160,6 +160,21 @@ try
 
     builder.Services.AddSingleton(config);
 
+    // Built-in DLTP listener (off unless Dltp:Port is set), for Block Creators on a home or personal computer:
+    // tcps://<public IP>:<port> with no domain, authenticated by the node key. See Dltp/NodeDltpService.cs.
+    var dltpConfig = config;
+    builder.Services.AddSingleton(new Deltanium.Blocker.Dltp.NodeDltpOptions
+    {
+        NodeKey = () =>
+        {
+            try { return new NBitcoin.Key(Convert.FromHexString(dltpConfig.NodePrivateKey)); }
+            catch { return null; }
+        },
+        CentralUrl = () => dltpConfig.CentralEndpoint.ToString(),
+        Role = "blockcreatornode"
+    });
+    builder.Services.AddHostedService<Deltanium.Blocker.Dltp.NodeDltpService>();
+
     if (config.NodePublicKey == "NODE_PUBKEY_PLACEHOLDER" || config.NodePrivateKey == "NODE_PRIVKEY_PLACEHOLDER" ||
         string.IsNullOrWhiteSpace(config.NodePrivateKey))
     {
