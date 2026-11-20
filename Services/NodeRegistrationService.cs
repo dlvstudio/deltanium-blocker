@@ -1,11 +1,14 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using NBitcoin;
+using Deltanium.Blocker.Core;
 
 namespace Deltanium.Blocker.Services
 {
@@ -71,6 +74,7 @@ namespace Deltanium.Blocker.Services
             // register the local listen URL as its public endpoint.
             var endpoint = tcpEndpoint != null && Uri.TryCreate(_endpoint, UriKind.Absolute, out var local) && local.IsLoopback
                 ? "" : _endpoint;
+            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             var payload = new
             {
                 endpoint,
@@ -78,7 +82,10 @@ namespace Deltanium.Blocker.Services
                 // or the built-in listener's address (Dltp__PublicEndpoint, e.g. tcps://auto:7333 on a home computer).
                 tcpEndpoint,
                 voucher = _voucher,
-                publicKey = publicKeyHex
+                publicKey = publicKeyHex,
+                // Signed with the node key: only the holder of this key can register it (Central checks it).
+                timestamp,
+                signature = SignRegistration(privateKey, "blocker", publicKeyHex, endpoint, tcpEndpoint, _voucher, timestamp)
             };
 
             _logger.LogInformation($"[REGISTRATION] Registering with Central API at {_apiUrl}...");
@@ -102,7 +109,16 @@ namespace Deltanium.Blocker.Services
                 };
 
                 await File.WriteAllTextAsync(_nodeInfoPath, JsonSerializer.Serialize(nodeInfo, new JsonSerializerOptions { WriteIndented = true }));
-                _logger.LogInformation("[REGISTRATION] Block Creator node registered successfully!");
+                if ((int)response.StatusCode == 202)
+                {
+                    // Registered but not active yet: the fee must be paid and approved by the Super Admin first.
+                    _logger.LogWarning("[REGISTRATION] Registration received; the node is not active yet.");
+                    if (apiResponse.ValueKind == JsonValueKind.Object && apiResponse.TryGetProperty("instructions", out var how))
+                        _logger.LogWarning("[REGISTRATION] {Instructions}", how.GetString());
+                    _logger.LogWarning("[REGISTRATION] Status: {Url}", $"{_apiUrl}/api/noderegistration/{publicKeyHex}");
+                }
+                else
+                    _logger.LogInformation("[REGISTRATION] Block Creator node registered successfully!");
                 _logger.LogInformation($"[REGISTRATION] Public Key: {publicKeyHex.Substring(0, Math.Min(20, publicKeyHex.Length))}...");
                 _logger.LogInformation($"[REGISTRATION] Node info saved to {_nodeInfoPath}");
                 if (!keyFromEnv)
@@ -130,6 +146,16 @@ namespace Deltanium.Blocker.Services
                         : error
                 };
             }
+        }
+
+        /// <summary>NODE-REGISTER|role|pk|endpoint|tcpEndpoint|voucher|ts, signed over NetworkScope like every node signature.</summary>
+        public static string RegistrationMessage(string role, string publicKey, string? endpoint, string? tcpEndpoint, string voucher, long timestamp) =>
+            $"NODE-REGISTER|{role}|{publicKey.Trim()}|{(endpoint ?? "").Trim().TrimEnd('/')}|{(tcpEndpoint ?? "").Trim().TrimEnd('/')}|{voucher.Trim()}|{timestamp}";
+
+        public static string SignRegistration(Key key, string role, string publicKey, string? endpoint, string? tcpEndpoint, string voucher, long timestamp)
+        {
+            var hash = SHA256.HashData(Encoding.UTF8.GetBytes(NetworkScope.Scope(RegistrationMessage(role, publicKey, endpoint, tcpEndpoint, voucher, timestamp))));
+            return Convert.ToBase64String(key.Sign(new uint256(hash)).ToDER());
         }
 
         public async Task<NodeInfo?> LoadNodeInfoAsync()
