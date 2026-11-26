@@ -67,10 +67,14 @@ namespace Deltanium.Blocker.Controllers
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var needle = q.Trim();
+                // Ids of 8+ characters are also looked up inside the tx data, so a file id finds its
+                // StorageOperation and every StorageTerm that mentions it.
+                var inData = needle.Length >= 8;
                 filtered = filtered.Where(t =>
                     Contains(t.Id, needle) ||
                     Contains(t.From, needle) ||
-                    Contains(t.To, needle));
+                    Contains(t.To, needle) ||
+                    (inData && DataContains(t, needle)));
             }
 
             var list = filtered
@@ -85,6 +89,41 @@ namespace Deltanium.Blocker.Controllers
                 offset,
                 limit,
                 items = page
+            });
+        }
+
+        /// <summary>
+        /// Confirmed StorageTerm txs in blocks above <paramref name="afterHeight"/>, oldest first, with data and
+        /// signature, so a Store can follow the chain and check Central's signature itself.
+        /// </summary>
+        [HttpGet("storage-terms")]
+        public IActionResult StorageTerms([FromQuery] long afterHeight = -1, [FromQuery] int limit = 50)
+        {
+            limit = Math.Clamp(limit, 1, 200);
+            var rows = EnumerateConfirmed()
+                .Where(t => t.BlockHeight > afterHeight && string.Equals(t.Type, nameof(TransactionType.StorageTerm), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(t => t.BlockHeight)
+                .ToList();
+            // Never cut a block in half: a reader resumes from the last height it saw.
+            var page = rows.Take(limit).ToList();
+            if (page.Count > 0)
+            {
+                var lastHeight = page[^1].BlockHeight;
+                page.AddRange(rows.Skip(limit).TakeWhile(t => t.BlockHeight == lastHeight));
+            }
+            return Ok(new
+            {
+                height = _state.Height,
+                items = page.Select(t => new
+                {
+                    t.Id,
+                    t.From,
+                    t.Timestamp,
+                    t.Signature,
+                    blockHeight = t.BlockHeight,
+                    blockId = t.BlockId,
+                    data = t.Data
+                })
             });
         }
 
@@ -182,6 +221,13 @@ namespace Deltanium.Blocker.Controllers
                     "pending",
                     tx.Versions);
             }
+        }
+
+        private static bool DataContains(TxRow t, string needle)
+        {
+            if (t.Data == null || t.Data.Count == 0) return false;
+            try { return System.Text.Json.JsonSerializer.Serialize(t.Data).Contains(needle, StringComparison.OrdinalIgnoreCase); }
+            catch { return false; }
         }
 
         private static bool Contains(string? hay, string needle) =>

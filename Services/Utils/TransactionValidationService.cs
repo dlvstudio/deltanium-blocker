@@ -313,6 +313,75 @@ namespace Deltanium.Blocker.Services.Utils
             return true;
         }
 
+        public const int StorageTermMaxEntries = 500;
+
+        public static string StorageTermHash(string terms) =>
+            Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(terms))).ToLowerInvariant();
+
+        public static string StorageTermSignPayload(string id, long timestamp, string terms) =>
+            $"STORAGETERM|{id}|{timestamp}|{StorageTermHash(terms)}";
+
+        /// <summary>StorageTerm: from Central, signed by Central over a payload that binds the id, time and every entry.</summary>
+        public bool ValidateStorageTerm(BlockerTxRequest req, out string error)
+        {
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(_trustedCentralPublicKey))
+            {
+                error = "Central public key not configured on blocker";
+                return false;
+            }
+            if (!string.Equals(req.From?.Trim(), _trustedCentralPublicKey, StringComparison.OrdinalIgnoreCase))
+            {
+                error = "StorageTerm From must be Central public key";
+                return false;
+            }
+            if (req.Data.ValueKind != JsonValueKind.Object || !req.Data.TryGetProperty("terms", out var termsEl) ||
+                termsEl.ValueKind != JsonValueKind.String)
+            {
+                error = "StorageTerm requires data.terms (JSON string)";
+                return false;
+            }
+            var terms = termsEl.GetString() ?? "";
+            if (req.Timestamp <= 0 || req.SignPayload != StorageTermSignPayload(req.Id, req.Timestamp, terms))
+            {
+                error = "StorageTerm SignPayload does not match id, timestamp and terms";
+                return false;
+            }
+            if (!SignatureVerifier.Verify(_trustedCentralPublicKey, req.SignPayload, req.Signature))
+            {
+                error = "Invalid Central signature on StorageTerm";
+                return false;
+            }
+            try
+            {
+                using var doc = JsonDocument.Parse(terms);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0 ||
+                    doc.RootElement.GetArrayLength() > StorageTermMaxEntries)
+                {
+                    error = $"StorageTerm terms must be an array of 1..{StorageTermMaxEntries} entries";
+                    return false;
+                }
+                foreach (var t in doc.RootElement.EnumerateArray())
+                {
+                    if (t.ValueKind != JsonValueKind.Object ||
+                        !t.TryGetProperty("fileId", out var f) || f.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(f.GetString()) ||
+                        !t.TryGetProperty("status", out var st) || st.ValueKind != JsonValueKind.String ||
+                        !t.TryGetProperty("paidUntil", out var pu) || !pu.TryGetInt64(out _) ||
+                        !t.TryGetProperty("deleteAfter", out var da) || !da.TryGetInt64(out _))
+                    {
+                        error = "StorageTerm entry needs fileId, status, paidUntil, deleteAfter";
+                        return false;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                error = "StorageTerm terms is not valid JSON";
+                return false;
+            }
+            return true;
+        }
+
         public bool VerifyDecision(DecisionResponse response, string expectedTxId, string blockerPubKey)
         {
             var payload = response.Decision;

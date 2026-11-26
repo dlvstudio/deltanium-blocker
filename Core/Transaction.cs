@@ -16,7 +16,13 @@ namespace Deltanium.Blocker.Core
         Transfer,
         Donate,
         /// <summary>Fiat on-ramp: treasury/Central credits D to user. Requires Central + Super Admin signatures.</summary>
-        TopUp
+        TopUp,
+        /// <summary>
+        /// Central publishes how long stored items are paid for: data.terms is a JSON string of
+        /// { fileId, status, paidUntil, deleteAfter, blocks? }. SignPayload = STORAGETERM|id|timestamp|sha256hex(terms),
+        /// signed by Central. Stores read it to know, from the chain alone, what they may delete.
+        /// </summary>
+        StorageTerm
     }
 
     public record Transaction

@@ -90,6 +90,15 @@ namespace Deltanium.Blocker.Controllers
                     return BadRequest(new { error });
                 }
             }
+            else if (txType == TransactionType.StorageTerm)
+            {
+                if (!_validationService.ValidateStorageTerm(req, out var error))
+                {
+                    _logger.LogWarning("Invalid StorageTerm tx {TxId}: {Error}. Returning 400.", req.Id, error);
+                    _metrics.IncrementInvalid();
+                    return BadRequest(new { error });
+                }
+            }
             else if (txType == TransactionType.TopUp)
             {
                 if (!_validationService.ValidateTopUp(req, out var error))
