@@ -47,4 +47,26 @@ public class StorageTermValidationTests
         e.Should().Contain("does not match");
         sut.ValidateStorageTerm(Req(central, central.PubKey.ToHex(), "[{\"fileId\":\"f1\"}]"), out _).Should().BeFalse();
     }
+
+    private static BlockerTxRequest RowsReq(Key central, string rows, string id = "lr-000000000001-0000", long ts = 1_800_000_000)
+    {
+        var payload = TransactionValidationService.LedgerRowsSignPayload(id, ts, 1, 0, 1, rows);
+        var data = JsonDocument.Parse(JsonSerializer.Serialize(new { anchorSeq = 1, part = 0, parts = 1, rows })).RootElement;
+        return new BlockerTxRequest(id, "LedgerRows", central.PubKey.ToHex(), "", data, ts, "0.0000000000", Sign(central, payload), payload, null);
+    }
+
+    private static string Row(string amount) =>
+        "[{\"id\":\"r1\",\"from\":\"alice\",\"to\":\"bob\",\"amount\":\"" + amount + "\",\"kind\":\"transfer\",\"refId\":\"x\",\"at\":\"2026-11-27T06:02:59.241716Z\"}]";
+
+    [Fact]
+    public void Ledger_rows_of_zero_D_are_accepted_but_negative_ones_are_not()
+    {
+        // Central booked a few 0 D rows (amounts below the 1e-10 unit) before it rounded them away; they are part of
+        // the anchored LedgerRoot, so refusing them would stall the chain's replay at that window forever.
+        var central = new Key();
+        var sut = new TransactionValidationService(NullLogger<TransactionValidationService>.Instance, central.PubKey.ToHex());
+        sut.ValidateLedgerRows(RowsReq(central, Row("0.0000000000")), out var error).Should().BeTrue(error);
+        sut.ValidateLedgerRows(RowsReq(central, Row("1.5000000000")), out error).Should().BeTrue(error);
+        sut.ValidateLedgerRows(RowsReq(central, Row("-1.0000000000")), out _).Should().BeFalse();
+    }
 }

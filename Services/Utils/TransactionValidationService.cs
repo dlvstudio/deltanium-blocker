@@ -434,10 +434,12 @@ namespace Deltanium.Blocker.Services.Utils
                 foreach (var r in list)
                 {
                     if (string.IsNullOrWhiteSpace(r.Id) || string.IsNullOrWhiteSpace(r.Kind) || string.IsNullOrWhiteSpace(r.At) ||
-                        !decimal.TryParse(r.Amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) || amount <= 0 ||
+                        !decimal.TryParse(r.Amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) || amount < 0 ||
                         (string.IsNullOrEmpty(r.From) && string.IsNullOrEmpty(r.To)))
                     {
-                        error = "LedgerRows row needs id, kind, at, a positive amount and an account";
+                        // A 0 D row moves nothing but is part of the anchored LedgerRoot, so it must be accepted as is
+                        // (Central booked a few before it started rounding amounts to the 1e-10 unit).
+                        error = "LedgerRows row needs id, kind, at, a non-negative amount and an account";
                         return false;
                     }
                 }
