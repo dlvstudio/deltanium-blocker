@@ -90,6 +90,15 @@ namespace Deltanium.Blocker.Controllers
                     return BadRequest(new { error });
                 }
             }
+            else if (txType == TransactionType.LedgerRows)
+            {
+                if (!_validationService.ValidateLedgerRows(req, out var error))
+                {
+                    _logger.LogWarning("Invalid LedgerRows tx {TxId}: {Error}. Returning 400.", req.Id, error);
+                    _metrics.IncrementInvalid();
+                    return BadRequest(new { error });
+                }
+            }
             else if (txType == TransactionType.StorageTerm)
             {
                 if (!_validationService.ValidateStorageTerm(req, out var error))

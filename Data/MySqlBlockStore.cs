@@ -30,6 +30,20 @@ namespace Deltanium.Blocker.Data
             return blocks;
         }
 
+        /// <summary>One INSERT per block, instead of rewriting every row (plan phase 0).</summary>
+        public void Append(Block block, IReadOnlyList<Block> chain)
+        {
+            using var db = _factory.CreateDbContext();
+            db.Blocks.Add(new BlockRecord
+            {
+                Id = block.Id,
+                Height = block.Height,
+                BlockJson = JsonSerializer.Serialize(block, JsonOptions),
+                SavedAt = DateTime.UtcNow
+            });
+            db.SaveChanges();
+        }
+
         public void SaveAll(IReadOnlyList<Block> blocks)
         {
             using var db = _factory.CreateDbContext();

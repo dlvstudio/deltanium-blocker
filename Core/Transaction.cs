@@ -22,7 +22,13 @@ namespace Deltanium.Blocker.Core
         /// { fileId, status, paidUntil, deleteAfter, blocks? }. SignPayload = STORAGETERM|id|timestamp|sha256hex(terms),
         /// signed by Central. Stores read it to know, from the chain alone, what they may delete.
         /// </summary>
-        StorageTerm
+        StorageTerm,
+        /// <summary>
+        /// Central's wallet ledger rows of one anchor window (data: anchorSeq, part, parts, rows = JSON string).
+        /// SignPayload = LEDGERROWS|id|timestamp|anchorSeq|part|parts|sha256hex(rows), signed by Central. Blockers
+        /// replay them into balances and check them against the anchor's LedgerRoot and BalancesRoot.
+        /// </summary>
+        LedgerRows
     }
 
     public record Transaction

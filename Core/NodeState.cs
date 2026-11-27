@@ -25,7 +25,7 @@ namespace Deltanium.Blocker.Core
             lock (_lock)
             {
                 _chain.Add(block);
-                _store.SaveAll(_chain);
+                _store.Append(block, _chain);
             }
         }
 

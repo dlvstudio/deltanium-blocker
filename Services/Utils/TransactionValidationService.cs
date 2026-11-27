@@ -382,6 +382,74 @@ namespace Deltanium.Blocker.Services.Utils
             return true;
         }
 
+        public const int LedgerRowsMaxPerPart = 500;
+
+        public static string LedgerRowsSignPayload(string id, long timestamp, long anchorSeq, long part, long parts, string rows) =>
+            $"LEDGERROWS|{id}|{timestamp}|{anchorSeq}|{part}|{parts}|{StorageTermHash(rows)}";
+
+        /// <summary>LedgerRows: from Central, signed over a payload that binds the window, the part and every row.
+        /// Whether the rows are Central's real ledger is checked later against the anchor in the chain.</summary>
+        public bool ValidateLedgerRows(BlockerTxRequest req, out string error)
+        {
+            error = string.Empty;
+            if (string.IsNullOrWhiteSpace(_trustedCentralPublicKey))
+            {
+                error = "Central public key not configured on blocker";
+                return false;
+            }
+            if (!string.Equals(req.From?.Trim(), _trustedCentralPublicKey, StringComparison.OrdinalIgnoreCase))
+            {
+                error = "LedgerRows From must be Central public key";
+                return false;
+            }
+            if (req.Data.ValueKind != JsonValueKind.Object ||
+                !req.Data.TryGetProperty("anchorSeq", out var seqEl) || !seqEl.TryGetInt64(out var seq) || seq <= 0 ||
+                !req.Data.TryGetProperty("part", out var partEl) || !partEl.TryGetInt64(out var part) ||
+                !req.Data.TryGetProperty("parts", out var partsEl) || !partsEl.TryGetInt64(out var parts) ||
+                parts < 1 || part < 0 || part >= parts ||
+                !req.Data.TryGetProperty("rows", out var rowsEl) || rowsEl.ValueKind != JsonValueKind.String)
+            {
+                error = "LedgerRows requires data.anchorSeq, part, parts and rows (JSON string)";
+                return false;
+            }
+            var rows = rowsEl.GetString() ?? "";
+            if (req.Timestamp <= 0 || req.SignPayload != LedgerRowsSignPayload(req.Id, req.Timestamp, seq, part, parts, rows))
+            {
+                error = "LedgerRows SignPayload does not match id, timestamp, window and rows";
+                return false;
+            }
+            if (!SignatureVerifier.Verify(_trustedCentralPublicKey, req.SignPayload, req.Signature))
+            {
+                error = "Invalid Central signature on LedgerRows";
+                return false;
+            }
+            try
+            {
+                var list = Ledger.ChainLedger.ParseRows(rows);
+                if (list.Count > LedgerRowsMaxPerPart)
+                {
+                    error = $"LedgerRows part holds at most {LedgerRowsMaxPerPart} rows";
+                    return false;
+                }
+                foreach (var r in list)
+                {
+                    if (string.IsNullOrWhiteSpace(r.Id) || string.IsNullOrWhiteSpace(r.Kind) || string.IsNullOrWhiteSpace(r.At) ||
+                        !decimal.TryParse(r.Amount, NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) || amount <= 0 ||
+                        (string.IsNullOrEmpty(r.From) && string.IsNullOrEmpty(r.To)))
+                    {
+                        error = "LedgerRows row needs id, kind, at, a positive amount and an account";
+                        return false;
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                error = "LedgerRows rows is not valid JSON";
+                return false;
+            }
+            return true;
+        }
+
         public bool VerifyDecision(DecisionResponse response, string expectedTxId, string blockerPubKey)
         {
             var payload = response.Decision;

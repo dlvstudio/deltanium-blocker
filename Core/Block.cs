@@ -26,12 +26,19 @@ namespace Deltanium.Blocker.Core
         public string LedgerRoot { get; init; } = string.Empty;
         public string BalancesRoot { get; init; } = string.Empty;
 
+        /// <summary>Balances replayed from the chain's LedgerRows after this block: last anchor window applied and the
+        /// Merkle root of every non-zero balance (empty on blocks made before the chain ledger).</summary>
+        public long StateSeq { get; init; }
+        public string StateRoot { get; init; } = string.Empty;
+
         /// <summary>Preimage of the block id. Anchor fields are appended only when present (pre-anchor blocks keep their ids).</summary>
         public static string IdPayload(Block b)
         {
             var s = $"{b.PreviousId}:{b.Height}:{b.Timestamp}:{b.MerkleRoot}:{b.CreatorPublicKey}";
             if (!string.IsNullOrEmpty(b.LedgerRoot))
                 s += $":{b.LedgerAnchorSeq}:{b.LedgerRoot}:{b.BalancesRoot}";
+            if (!string.IsNullOrEmpty(b.StateRoot))
+                s += $":state:{b.StateSeq}:{b.StateRoot}";
             return s;
         }
 

@@ -16,6 +16,14 @@ namespace Deltanium.Blocker.Services
         private readonly NodeState _state;
         private readonly ILogger<BlockBuilder> _logger;
 
+        private readonly Ledger.ChainLedgerService? _ledger;
+
+        public BlockBuilder(NodeConfig config, TransactionPool pool, NodeState state, ILogger<BlockBuilder> logger,
+            Ledger.ChainLedgerService? ledger = null) : this(config, pool, state, logger)
+        {
+            _ledger = ledger;
+        }
+
         public BlockBuilder(NodeConfig config, TransactionPool pool, NodeState state, ILogger<BlockBuilder> logger)
         {
             _config = config;
@@ -51,6 +59,13 @@ namespace Deltanium.Blocker.Services
                 LedgerRoot = auth.LedgerRoot ?? string.Empty,
                 BalancesRoot = auth.BalancesRoot ?? string.Empty
             };
+
+            if (_ledger != null)
+            {
+                // The header commits the balances replayed from the chain's LedgerRows, this block included.
+                var (stateSeq, stateRoot) = _ledger.Preview(block);
+                block = block with { StateSeq = stateSeq, StateRoot = stateRoot };
+            }
 
             var blockId = CoreBlock.Hash(CoreBlock.IdPayload(block));
             block = block with

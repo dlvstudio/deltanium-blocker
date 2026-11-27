@@ -10,6 +10,14 @@ namespace Deltanium.Blocker.Services
         private readonly NodeConfig _config;
         private readonly ILogger<BlockValidator> _logger;
 
+        private readonly Ledger.ChainLedgerService? _ledger;
+
+        public BlockValidator(NodeConfig config, ILogger<BlockValidator> logger, Ledger.ChainLedgerService? ledger)
+            : this(config, logger)
+        {
+            _ledger = ledger;
+        }
+
         public BlockValidator(NodeConfig config, ILogger<BlockValidator> logger)
         {
             _config = config;
@@ -56,6 +64,16 @@ namespace Deltanium.Blocker.Services
                 return false;
             }
 
+            if (_ledger != null && !string.IsNullOrEmpty(block.StateRoot))
+            {
+                var (seq, root) = _ledger.Preview(block);
+                if (seq != block.StateSeq || !string.Equals(root, block.StateRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    reason = "State root mismatch";
+                    _logger.LogWarning($"Validation failed for block {block.Id}: {reason}. Expected {seq}:{root}, got {block.StateSeq}:{block.StateRoot}");
+                    return false;
+                }
+            }
             var expectedBlockId = Block.Hash(Block.IdPayload(block));
             if (!string.Equals(expectedBlockId, block.Id, StringComparison.OrdinalIgnoreCase))
             {

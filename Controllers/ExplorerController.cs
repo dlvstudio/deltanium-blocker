@@ -16,6 +16,15 @@ namespace Deltanium.Blocker.Controllers
         private readonly TransactionPool _pool;
         private readonly NodeConfig _config;
 
+        private readonly Services.Ledger.ChainLedgerService? _ledger;
+
+        [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
+        public ExplorerController(NodeState state, TransactionPool pool, NodeConfig config, Services.Ledger.ChainLedgerService? ledger = null)
+            : this(state, pool, config)
+        {
+            _ledger = ledger;
+        }
+
         public ExplorerController(NodeState state, TransactionPool pool, NodeConfig config)
         {
             _state = state;
@@ -125,6 +134,45 @@ namespace Deltanium.Blocker.Controllers
                     data = t.Data
                 })
             });
+        }
+
+        /// <summary>
+        /// D balances replayed from the chain's LedgerRows and how they compare with Central's anchors: every applied
+        /// window, whether its rows hash to the anchor's LedgerRoot and the balances after it to its BalancesRoot.
+        /// The plan's gate reads "matched == checked, mismatched == 0" here.
+        /// </summary>
+        [HttpGet("ledger-state")]
+        public IActionResult LedgerState([FromQuery] int recent = 20)
+        {
+            var l = (_ledger ?? new Services.Ledger.ChainLedgerService(_state)).Snapshot();
+            var verified = l.Checks.Where(c => c.BalancesRootOk != null).ToList();
+            var bad = verified.Where(c => c.BalancesRootOk == false || c.LedgerRootOk == false).ToList();
+            return Ok(new
+            {
+                height = _state.Height,
+                appliedSeq = l.AppliedSeq,
+                waitingSeqs = l.WaitingSeqs.ToList(),
+                stateRoot = l.StateRoot,
+                accounts = l.Balances.Count,
+                windows = l.Checks.Count,
+                @checked = verified.Count,
+                matched = verified.Count - bad.Count,
+                mismatched = bad.Count,
+                unverified = l.Checks.Count - verified.Count,
+                firstMismatchSeq = bad.Count > 0 ? bad[0].Seq : (long?)null,
+                recent = l.Checks.TakeLast(Math.Clamp(recent, 1, 200)).Reverse().Select(c => new
+                {
+                    c.Seq, c.Rows, c.AppliedAtHeight, c.LedgerRootOk, c.BalancesRootOk, c.RootAfter
+                })
+            });
+        }
+
+        /// <summary>An account's D balance as the chain computes it (pseudonymous keys, like any public chain).</summary>
+        [HttpGet("ledger-state/{account}")]
+        public IActionResult LedgerBalance(string account)
+        {
+            var l = (_ledger ?? new Services.Ledger.ChainLedgerService(_state)).Snapshot();
+            return Ok(new { account, balance = l.BalanceOf(account), appliedSeq = l.AppliedSeq, height = _state.Height });
         }
 
         [HttpGet("txs/{txId}")]

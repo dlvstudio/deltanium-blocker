@@ -239,10 +239,14 @@ try
         new NodeState(provider.GetRequiredService<IBlockStore>()));
     builder.Services.AddSingleton<CentralCoordinatorClient>(provider =>
         new CentralCoordinatorClient(config, provider.GetRequiredService<ILogger<CentralCoordinatorClient>>()));
+    builder.Services.AddSingleton<Deltanium.Blocker.Services.Ledger.ChainLedgerService>(provider =>
+        new Deltanium.Blocker.Services.Ledger.ChainLedgerService(provider.GetRequiredService<NodeState>()));
     builder.Services.AddSingleton<BlockValidator>(provider =>
-        new BlockValidator(config, provider.GetRequiredService<ILogger<BlockValidator>>()));
+        new BlockValidator(config, provider.GetRequiredService<ILogger<BlockValidator>>(),
+            provider.GetRequiredService<Deltanium.Blocker.Services.Ledger.ChainLedgerService>()));
     builder.Services.AddSingleton<BlockBuilder>(provider =>
-        new BlockBuilder(config, provider.GetRequiredService<TransactionPool>(), provider.GetRequiredService<NodeState>(), provider.GetRequiredService<ILogger<BlockBuilder>>()));
+        new BlockBuilder(config, provider.GetRequiredService<TransactionPool>(), provider.GetRequiredService<NodeState>(), provider.GetRequiredService<ILogger<BlockBuilder>>(),
+            provider.GetRequiredService<Deltanium.Blocker.Services.Ledger.ChainLedgerService>()));
     builder.Services.AddSingleton<TransactionValidationService>(provider =>
         new TransactionValidationService(
             provider.GetRequiredService<ILogger<TransactionValidationService>>(),
